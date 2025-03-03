@@ -1,1 +1,1 @@
-dd if=./boot.img of=//./f:
+dd if=floppy.img of=//./f:

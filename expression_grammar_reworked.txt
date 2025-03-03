@@ -1,0 +1,23 @@
+E -> T RE                   
+                                     
+RE -> + T RE | - T RE | eps 
+                                   
+T -> F RT                         
+                                     
+RT -> * F RT | / F RT | eps 
+                                     
+F -> id | -F | !F | ( E ) | Num | true | false
+      
+RelE -> E RRelE
+
+RRelE -> RelOp E RRelE | eps
+
+RelOp -> > | >= | < | <= | == | !=   
+
+JointE -> RelE Union
+
+Union -> || UnionT Union | eps 
+
+UnionT -> RelE Intersect 
+
+Intersect -> && RelE Intersect | eps

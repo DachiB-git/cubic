@@ -1,0 +1,5 @@
+1. figure out dependency graph enumeration
+2. get a concrete understanding of the L-attributed SDD
+DONE 3. figure out how to build a parse tree                      
+4. extract hashmap functionality from utils/symbol_table for reuseabillity
+DONE 5. tree traversal 

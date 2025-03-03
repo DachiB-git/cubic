@@ -1,0 +1,96 @@
+| TODO |
+add CC 
+add rSt -> return CC ;
+add Pa -> CC
+add  new *Na;
+design heap system
+| TODO | 
+
+
+Na -> LeDiS 
+Num -> DiS 
+------------------------------------------
+prog -> TyDS VaDS FuDS                          // first(prog) = {typedef, int, uint, bool, char, Na, func}
+                                                // follow(prog) = {$}
+TyDS -> TyD TyDS | eps                          // first(TyDS) = {typedef, eps}
+                                                // follow(TyDS) = {int, uint, bool, char, Na}
+TyD -> typedef TE Na ;                          // first(TyD) = {typedef}
+                                                // follow(TyD) = {typedef}
+TE -> Ty TEDeco | struct { VaDS }               // first(TE) = {int, uint, bool, char, Na, struct}
+                                                // follow(TE) = {Na}
+TEDeco -> [E] | *                               // first(TEDeco) = {[, *}
+                                                // follow(TEDeco) = {Na}
+Ty -> int | uint | bool | char | Na             // first(Ty) = {int, uint, bool, char, Na}
+                                                // follow(Ty) = {Na, [, *}
+VaDS -> VaD VaDS | eps                          // first(VaDS) = {int, uint, bool, char, Na, eps}
+                                                // follow(VaDS) = { }, func, Na, *, &, if, while, do, return}
+VaD -> Ty Na ;                                  // first(VaD) = {int, uint, bool, char, Na}
+                                                // follow(VaD) = {int, uint, bool, char, Na}
+FuDS -> FuD RFuDS                               // first(FuDS) = {func}
+                                                // follow(FuDS) = {$}
+RFuDS -> FuD RFuDS | eps                        // first(RFuDS) = {func, eps}
+                                                // follow(RFuDS) = {$}
+FuD -> func Ty Na ( PaDS ) { VaDS body }        // first(FuD) = {func}
+                                                // follow(FuD) = {func}
+PaD -> Ty Na                                    // first(PaD) = {int, uint, bool, char, Na}
+                                                // follow(PaD) = {,}
+PaDS -> PaD RPaDS | eps                         // first(PaDS) = {int, uint, bool, char, Na, eps}
+                                                // follow(PaDS) = {)}
+RPaDS -> , PaD RPaDS | eps                      // first(RPaDS) = {, , eps}
+                                                // follow(RPaDS) = {)}
+body -> StS rSt | rSt                           // first(body) = {return, Na, *, &, if, while, do}
+                                                // follow(body) = { } } 
+rSt -> return rE ;                              // first(rSt) = {return}
+                                                // follow(rSt) = { } }
+rE -> E | BE | BC                               // first(rE) = {Na, *, &, -, (, Num, !, true, false}
+                                                // follow(rE) = {;}
+StS -> St StS | eps                             // first(StS) = {Na, *, &, if, while, do, eps}
+                                                // follow(StS) = {return, }}
+St -> id = StE;                                 // first(St) = {Na, *, &, if, while, do}
+                                                // follow(St) = {Na, *, &, if, while, do}
+St -> if ( BE ) { StS } MatchedElse             // first(MatchedElse) = {else, eps}              
+MatchedElse -> else { StS } | eps               // follow(MatchedElse) = {Na, *, &, if, while, do}
+St -> while ( BE ) { StS }
+St -> do { StS } while ( BE ) ;
+StE -> E | BE | BC | Num | Na ( ArgS )          // first(StE) = {Na, *, &, !, -, (, Num, true, false}         
+                                                // follow(StE) = {;} 
+Arg -> E | BE | BC                              // first(Arg) = {Na, *, &, !, -, (, Num, true, false}
+                                                // follow(Arg) = {,}
+ArgS -> Arg RArgS | eps                         // first(ArgS) = {Na, *, &, !, -, (, Num, true, false, eps}
+                                                // follow(ArgS) = {)}
+RArgS -> , Arg RArgs | eps                      // first(RArgS) = {, , eps}
+                                                // follow(RArgS) = {)}
+id -> Na idDecor | *Na | &Na                    // first(id) = {Na, *, &}
+                                                // follow(id) = { =, *, /, &&}       // TODO add remaining
+idDecor -> .id | [E] | eps                      // first(idDecor) = {., [, eps}
+                                                // follow(idDecor) = { =, *, /, &&}
+E -> T restE                                    // first(E) = {Na, *, &, -, (, Num}
+                                                // follow(E) = {), ], >, >=, <, <=, ==, !=, &&, ;}
+restE -> + T restE | - T restE | eps            // first(restE) = {+, -, eps}
+                                                // follow(restE) = {), ], >, >=, <, <=, ==, !=, &&, ;}
+T -> F restT                                    // first(T) = {Na, *, &, -, (, Num}
+                                                // follow(T) = {+, -}
+restT -> * F restT | / F restT                  // first(restT) = {*, /} 
+                                                // follow(restT) = {+, -}
+F -> id | - F | ( E ) | Num                     // first(F) = {Na, *, &, -, (, Num}
+                                                // follow(F) = {*, /}
+BE -> BT restBE                                 // first(BE) = {Na, *, &, !, (, Num, true, false}
+                                                // follow(BE) = {), ;}
+restBE -> || BT restBE | eps                    // first(restBE) = {||, eps}
+                                                // follow(restBE) = {), ;}
+BT -> BF restBT                                 // first(BT) = {Na, *, &, !, (, Num, true, false}
+                                                // follow(BT) = {||}
+restBT -> && BF restBT | eps                    // first(restBT) = {&&, eps}
+                                                // follow(restBT) = {||}
+BF -> id | ! BF | ( BE ) | Atom                 // first(BF) = {Na, *, &, !, (, Num, true, false}
+                                                // follow(BF) = {&&}
+Atom -> AtomE RAtom                             // first(Atom) = {Na, *, &, -, (, Num, true, false}
+                                                // follow(Atom) = {&&}
+RAtom -> RelOp AtomE RAtom | eps                // first(RAtom) = {>, >=, <, <=, ==, !=, eps}
+                                                // follow(RAtom) = {&&}
+AtomE -> E | BC                                 // first(AtomE) = {Na, *, &, -, (, Num, true, false}
+                                                // follow(AtomE) = {>, >=, <, <=, ==, !=}
+BC -> true | false                              // first(BC) = {true, false}
+                                                // follow(BC) = {;, , , >, >=, <, <=, ==, !=}
+RelOp -> > | >= | < | <= | == | !=              // first(RelOp) = {>, >=, <, <=, ==, !=}
+                                                // follow(RelOp) = 

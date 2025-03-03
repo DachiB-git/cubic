@@ -1,0 +1,21 @@
+E
+E -> T
+E -> E + T
+E -> E - T
+T -> F
+T -> T * F
+T -> T / F
+F -> ( E )
+F -> C
+C -> DiS
+DiS -> Di DiS
+Di -> 0
+Di -> 1
+Di -> 2
+Di -> 3
+Di -> 4
+Di -> 5
+Di -> 6
+Di -> 7
+Di -> 8
+Di -> 9

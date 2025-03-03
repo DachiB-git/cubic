@@ -1,0 +1,104 @@
+prog
+Di -> 0
+Di -> 1
+Di -> 2
+Di -> 3
+Di -> 4
+Di -> 5
+Di -> 6
+Di -> 7
+Di -> 8
+Di -> 9
+DiS -> Di
+DiS -> Di DiS
+Le -> a
+Le -> z
+DiLe -> Le
+DiLe -> Di
+DiLeS -> DiLe
+DiLes -> DiLe DiLeS
+Na -> Le
+Na -> Le DiLeS
+C -> DiS
+C -> DiS u
+C -> null
+BC -> true
+BC -> false
+id -> Na
+id -> id . Na
+id -> id [ E ]
+id -> id *
+id -> id &
+F -> id
+F -> - F
+F -> ( E )
+F -> C
+T -> F
+T -> T * F
+T -> T / F
+E -> T
+E -> E + T
+E -> E - T
+Atom -> E > E
+Atom -> E >= E
+Atom -> E < E
+Atom -> E <= E
+Atom -> E == E
+Atom -> E != E
+Atom -> BC
+BF -> id
+BF -> Atom
+BF -> ! BF
+BF -> ( BE )
+BT -> BF
+BT -> BT && BF
+BE -> BT
+BE -> BE || BT
+St -> id = E ;
+St -> id = BE ;
+St -> id = CC ;
+St -> if BE { StS }
+St -> if Be { StS } else { StS }
+St -> while BE { StS }
+St -> id = Na ( PaS ) ;
+St -> id = Na ( ) ;
+St -> id = new Na * ;
+rSt -> return E ;
+rSt -> return BE ;
+rSt -> return CC ;
+Pa -> E
+Pa -> BE
+Pa -> CC
+PaS -> Pa
+PaS -> Pa , PaS
+StS -> St
+StS -> St StS
+prog -> TyDS VaDS FuDS
+prog -> VaDS FuDS
+prog -> TyDS FuDS
+prog -> FuDS
+TyDS -> TyD
+TyDS -> TyD TyDS
+TyD -> typedef TE Na ;
+Ty -> int
+Ty -> bool
+Ty -> char
+Ty -> uint
+Ty -> Na
+TE -> Ty [ DiS ]
+TE -> Ty *
+TE -> struct { VaDS }
+VaDS -> VaD
+VaDS -> VaD VaDS
+VaD -> Ty Na ;
+VaD -> Ty Na
+FuDS -> FuD
+FuDS -> FuD FuDS
+FuD -> func Ty Na ( PaDS ) { VaDS body }
+FuD -> func Ty Na ( PaDS ) { body }
+FuD -> func Ty Na ( ) { VaDS body }
+FuD -> func Ty Na ( ) { body }
+PaDS -> VaD
+PaDS -> VaD , PaDS
+body -> rSt
+body -> StS rSt

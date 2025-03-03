@@ -1,0 +1,10 @@
+        prog
+  |       |      |
+TyDS    VaDS    FuDS
+
+
+root -> left -> left.left -> left.right -> right
+
+
+
+Node(token, children[])

@@ -1,284 +1,681 @@
-; the symbol table
-; implements a basic hash map interface with FNV32_1 hashing algorithm 
-; with separate chaining
+[bits 32]
+%define itoa_buffer 0x1000_0064
+; cursors positions
+%define cursor_x_ptr 0x1000_0050
+%define cursor_y_ptr 0x1000_005c
+%define frame_buffer_ptr 0x000B_8000
+; screen constants
+%define vga_width 80
+%define vga_height 25
 
-; puts the key, val pair into the symbol table
-; EAX - symbol_table_ptr
-; EBX - key
-; ECX - val
-symbol_table_put_entry:
-
-; retrieves the value for the supplied key from the symbol_table if present, 
-; otherwise returns null
-; RETURN : EAX - value
-; EBX - symbol_table_ptr
-; ECX - key
-symbol_table_get_entry:
-
-
-; returns a linked_list node pointer into EAX, with optional initial values
-; STRUCTURE : Node <val, next_ptr>
-; EBX - val
-; ECX - next_ptr
+; linked_list* get_linked_list(int val, linked_list* next);
+; returns a linked_list node pointer into eax, with preset initial values
+; STRUCTURE : node <val, next_ptr>
 get_linked_list:
-PUSH EDX 
-PUSH EBX
-MOV EBX, 8
-CALL heap_alloc
-MOV EDX, EAX 
-POP EBX
-MOV DWORD [EDX], EBX 
-ADD EDX, 4
-MOV DWORD [EDX], ECX  
-POP EDX 
-RET 
+push ebp
+mov ebp, esp
+sub esp, 4
+push 8
+call heap_alloc
+add esp, 4
+mov dword [ebp - 4], eax 
+mov edx, dword [ebp + 8]
+mov eax, dword [ebp - 4]
+mov dword [eax], edx 
+mov edx, dword [ebp + 12]
+mov dword [eax + 4], edx 
+leave
+ret 
 
-; appends value in EAX to a linked list pointer in EBX 
+; appends value to the supplied list 
+; void linked_list_append(linked_list* list_ptr, auto val)
 linked_list_append:
-PUSH EBX 
-PUSH EAX 
+push ebp
+mov ebp, esp 
+sub esp, 4
+mov eax, dword [ebp + 8]        ; load list_ptr
 .loop:
-ADD EBX, 4
-MOV EDX, EBX 
-MOV DWORD EDX, [EDX]
-CMP EDX, 0x00 
-JE .tail_found
-MOV DWORD EDX, [EDX]
-MOV EBX, EDX
-JMP .loop
+add eax, 4                      ; get to next_ptr
+mov dword [ebp - 4], eax        ; save next_ptr addr
+mov eax, dword [eax]            ; load next_ptr
+cmp eax, 0 
+je .tail_found
+jmp .loop
 .tail_found:
-CALL get_linked_list
-MOV EDX, EAX 
-MOV DWORD [EBX], EDX 
-POP EAX 
-MOV DWORD [EDX], EAX 
-POP EBX 
-RET 
+; vacant next_ptr in ebx
+push 0 
+push dword [ebp + 12]
+call get_linked_list
+add esp, 8
+mov edx, eax 
+mov eax, dword [ebp - 4]
+mov dword [eax], edx  ; bind new tail node
+leave
+ret 
+
+; returns a reversed copy of the original list 
+; linked_list* linked_list_reverse(linked_list* list)
+linked_list_reverse:
+push ebp 
+mov ebp, esp 
+sub esp, 4
+mov dword [ebp - 4], 0
+.loop: 
+cmp dword [ebp + 8], 0
+je .exit
+mov eax, dword [ebp + 8]
+push dword [ebp - 4]
+push dword [eax]            ; get val 
+call get_linked_list
+add esp, 8
+mov dword [ebp - 4], eax    ; save last node
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 4]
+mov dword [ebp + 8], eax
+jmp .loop
+.exit:
+mov eax, dword [ebp - 4]
+leave
+ret 
 
 ; prints linked_list elements 
-; EAX - linked_list pointer 
-; EBX - buffer_ptr
 print_linked_list:
-PUSH EAX 
-PUSH EBX
-PUSH EDX
-MOV ESI, left_bracket
-CALL print_string
-CMP EAX, 0x00 
-JE .end
+push ebp 
+mov ebp, esp 
+cmp dword [ebp + 8], 0 
+jne .not_null
+leave 
+ret
+.not_null:
+push left_bracket
+call print_string
+add esp, 4
 .loop:
-MOV DWORD ECX, [EAX]
-CALL int_to_string_base_10
-MOV ESI, EBX 
-CALL print_string
-ADD EAX, 4
-MOV DWORD EAX, [EAX]
-CMP EAX, 0x00 
-JE .end 
-MOV ESI, comma_sep
-CALL print_string
-JMP .loop
+mov eax, dword [ebp + 8]
+push 16
+push itoa_buffer
+push dword [eax] 
+call itoa
+add esp, 12
+push itoa_buffer
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 4]
+mov dword [ebp + 8], eax
+cmp dword [ebp + 8], 0 
+je .end 
+push comma_sep
+call print_string
+add esp, 4
+jmp .loop
 .end:
-MOV ESI, right_bracket
-CALL print_string
-POP EDX
-POP EBX 
-POP EAX 
-RET 
+push right_bracket
+call print_string
+add esp, 4
+leave 
+ret 
 
 left_bracket: db '[', 0
 right_bracket: db ']', 0
 comma_sep: db ',', 0
 
-; returns a token_ptr into EAX, with initialized values 
-; STRUCTURE : Num Token => <tag, val>, Basic Token => <tag, null_ptr>, Id Token => <tag, symbol_table_ptr>
-; EBX - token tag
-; ECX - optional second argument, could be null | nullptr
+; returns a token_ptr into eax, with initialized values 
+; STRUCTURE : num token => <tag, val>, basic token => <tag, null_ptr>, id token => <tag, symbol_table_ptr>
+; token* get_token(int tag, auto value)
 get_token:
-PUSH EDX 
-PUSH EBX 
-MOV EBX, 8
-CALL heap_alloc
-POP EBX
-MOV EDX, EAX 
-MOV DWORD [EDX], EBX 
-ADD EDX, 4
-MOV DWORD [EDX], ECX
-POP EDX
-RET
+push ebp
+mov ebp, esp
+sub esp, 4
+push 8
+call heap_alloc
+add esp, 4
+mov dword [ebp - 4], eax 
+mov edx, dword [ebp + 8]
+mov eax, dword [ebp - 4]
+mov dword [eax], edx 
+mov edx, dword [ebp + 12]
+mov dword [eax + 4], edx 
+leave
+ret 
 
-; returns a string_builder_ptr into EAX
+; void print_token(token* token_ptr)
+print_token:
+push ebp
+mov ebp, esp
+sub esp, 4
+push left_caret
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov dword [ebp - 4], eax    ; save the tag
+push 10
+push itoa_buffer
+push dword [eax]
+call itoa
+add esp, 12
+push itoa_buffer
+call print_string
+add esp, 4
+push comma_sep
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+cmp dword [ebp - 4], NAME 
+je .print_addr
+push 10 
+jmp .print_int
+.print_addr:
+push 16
+.print_int:
+push itoa_buffer
+push dword [eax + 4]
+call itoa 
+add esp, 12
+push itoa_buffer
+call print_string
+add esp, 4
+push right_caret
+call print_string
+add esp, 4
+leave
+ret
+
+
+left_caret: db '<', 0
+right_caret: db '>', 0
+
+; returns a string_builder_ptr into eax, initialized with optional preset values
+; builder* get_string_builder(char c)
 get_string_builder:
-PUSH EBX 
-MOV EBX, 5
-CALL heap_alloc
-MOV EBX, EAX
-MOV BYTE [EBX], 0x00
-INC EBX 
-MOV DWORD [EBX], 0x00 
-POP EBX 
-RET
+push ebp
+mov ebp, esp
+sub esp, 4
+push 5
+call heap_alloc
+add esp, 4
+mov dword [ebp - 4], eax 
+mov dl, byte [ebp + 8]
+mov eax, dword [ebp - 4]
+mov byte [eax], dl   
+; mov edx, dword [ebp + 12]
+mov dword [eax + 1], 0x00
+mov eax, dword [ebp - 4]
+leave
+ret 
 
-; appends the char in AL to builder_ptr in EBX
+; appends the char to builder_ptr and increments the size
+; void string_builder_append(char c, builder* builder_ptr, int* size_ptr)
 string_builder_append:
-PUSHF
-PUSH EBX 
-PUSH ECX 
-PUSH EDX
-; EAX - char to append
-; EBX - base builder_ptr
-; ECX - string_builder_size pointer
-.check_head: 
-CLC 
-MOV EDX, EBX 
-MOV BYTE BL, [EBX]
-CMP BL, 0x00 
-JNE .load_next_node
-MOV BYTE [EDX], AL 
-JMP .end
+push ebp
+mov ebp, esp 
+.check_head:  
+mov eax, dword [ebp + 12]
+cmp byte [eax], 0
+jne .load_next_node
+mov dl, byte [ebp + 8]
+mov byte [eax], dl
+jmp .end
 .load_next_node:
-CLC 
-MOV EBX, EDX
-INC EBX,
-MOV DWORD EBX, [EBX]
-CMP EBX, 0x00 
-JNE .check_head
-PUSH EAX 
-CALL get_string_builder
-INC EDX
-MOV DWORD [EDX], EAX
-MOV EDX, EAX
-POP EAX
-MOV BYTE [EDX], AL 
+mov eax, dword [ebp + 12]
+cmp dword [eax + 1], 0 
+; jne .check_head
+je .append 
+mov eax, dword [eax + 1]
+mov dword [ebp + 12], eax 
+jmp .check_head
+.append:
+movsx eax, byte [ebp + 8]
+; movsx eax, al
+push eax 
+call get_string_builder
+add esp, 4
+mov edx, dword [ebp + 12]
+mov dword [edx + 1], eax
 .end:
-INC DWORD [ECX]
-POP EDX
-POP ECX
-POP EBX 
-POPF
-RET
+mov eax, dword [ebp + 16]
+inc dword [eax]
+leave
+ret
 
-; emptyes all nodes of the builter_ptr in EBX
-; builder_size_value pointer in ECX
+; emptyes all nodes of the builter_ptr
 ; preserving the allocated memory for new use
-; space and time complexity of O(n), where n is the max(len(s)) of all strings in source
-; lmao deffo need a better heap implementation 
+; space and time complexity of o(n), where n is the max(len(s)) of all strings in source
+; lmao deffo need a better heap implementation
+; void string_builder_clear(builder* builder_ptr, int* size_ptr) 
 string_builder_clear:
-PUSHF
-PUSH EBX
-PUSH ECX
-PUSH EDX
+push ebp 
+mov ebp, esp
 .check_head: 
-MOV EDX, EBX 
-MOV BYTE BL, [EBX]
-CMP BL, 0x00 
-JE .load_next_node
-MOV BYTE [EDX], 0x00            ; zero the char 
-DEC DWORD [ECX]                 ; size--
+mov eax, dword [ebp + 8]
+cmp byte [eax], 0x00 
+je .load_next_node
+mov eax, dword [ebp + 8]
+mov byte [eax], 0x00            ; zero the char 
+mov eax, dword [ebp + 12]       ; load size_ptr
+dec dword [eax]                 ; size--
 .load_next_node:
-MOV EBX, EDX
-INC EBX,
-MOV DWORD EBX, [EBX]
-CMP EBX, 0x00 
-JNE .check_head
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 1]
+mov dword [ebp + 8], eax
+cmp eax, 0x00 
+jne .check_head
 .end:
-POP EDX
-POP ECX 
-POP EBX
-POPF
-RET
+leave
+ret
 
-; returns a pointer to the constructed string into EAX
-; input: string_builder_ptr in EBX, size in ECX 
+; returns a pointer to the constructed string into eax
+; char* string_builder_to_string(builder* builder_ptr, int size)
 string_builder_to_string:
-PUSHF
-CMP ECX, 0              ; check if size > 0
-JNE .not_zero
-MOV EAX, 0x00           ; return null pointer
-POPF
-RET
-.not_zero:
-PUSH EBX
-PUSH ECX
-PUSH EDX
-PUSH EBX
-MOV EBX, ECX 
-INC EBX                 ; alloc size + 1 for null termination
-CALL heap_alloc
-POP EBX
-MOV EDX, EAX 
-PUSH EAX
-XOR EAX, EAX
+push ebp 
+mov ebp, esp
+sub esp, 4
+cmp dword [ebp + 12], 0         ; check if size > 0
+jne .not_zero
+mov eax, 0                      ; return null pointer
+leave
+ret
+.not_zero: 
+mov eax, dword [ebp + 12]
+inc eax 
+push eax                        ; alloc size + 1 for null termination
+call heap_alloc
+add esp, 4
+mov dword [ebp - 4], eax
+mov ecx, 0
 .loop:
-CMP EAX, ECX 
-JE .end       
+cmp ecx, dword [ebp + 12] 
+je .end       
 ; node -> char, next -> node -> char, next -> 
-; new_str_base[0] = node0.char, new_str_base[1] = node1.char, ...
-PUSH EBX 
-MOV BYTE BL, [EBX]
-MOV BYTE [EDX], BL
-POP EBX 
-INC EBX 
-MOV DWORD EBX, [EBX]
-INC EDX  
-INC EAX 
-JMP .loop
+; new_str_base[0] = node0.char, new_str_base[1] = node1.char, ... 
+mov eax, dword [ebp + 8]
+mov dl, byte [eax]           ; load char
+mov eax, dword [ebp - 4]
+mov byte [eax + ecx], dl
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 1]
+mov dword [ebp + 8], eax
+inc ecx 
+jmp .loop
 .end:
-MOV BYTE [EDX], 0x00    ; add null terminator
-POP EAX
-POP EDX 
-POP ECX 
-POP EBX
-POPF
-RET
+mov eax, dword [ebp - 4]
+mov byte [eax + ecx], 0    ; add null terminator
+leave
+ret
 
 ; converts the given integer value into a null terminated string
 ; and stores into the buffer location
-; EBX - string buffer addr
-; ECX - value to be converted 
-int_to_string_base_10:
-PUSHF
-PUSH EAX
-PUSH ECX
-PUSH EDX
-PUSH EBX
-MOV EDI, EBX
-MOV EAX, ECX
-MOV EBX, 10 
+; ebx - string buffer addr
+; ecx - value to be converted
+; void itoa(int value, char* str, int base) 
+itoa:
+push ebp
+mov ebp, esp
+sub esp, 4
+push edi 
+mov edi, dword [ebp + 12]
+mov dword [ebp - 4], edi 
+; if (base < 2 || base > 36) return null
+cmp dword [ebp + 16], 2
+jl .exit 
+cmp dword [ebp + 16], 36 
+jg .exit
+; if (value < 0 && base == 10) add '-'
+cmp dword [ebp + 8], 0
+jns .loop 
+cmp dword [ebp + 16], 10
+jne .loop
+mov byte [edi], '-'
+inc edi 
+; update offset
+mov dword [ebp - 4], edi
 .loop:
-CMP EAX, 0x00 
-JE .exit_loop
-CDQ 
-IDIV EBX
-; remainder in EDX
-PUSH EAX 
-MOV EAX, EDX
-ADD EAX, 0x30           ; convert to ASCII
-STOSB
-POP EAX 
-; quotient in EAX 
-JMP .loop
+mov eax, dword [ebp + 8]
+xor edx, edx
+cdq 
+idiv dword [ebp + 16]
+; remainder in edx
+mov dword [ebp + 8], eax 
+mov eax, dword itoa_chars[35 + edx]
+stosb
+cmp dword [ebp + 8], 0      ; if value != 0 repeat 
+je .exit_loop 
+jmp .loop
 .exit_loop:
-MOV BYTE [EDI], 0x00    ; add null terminator
+mov byte [edi], 0           ; add null terminator
 ; reverse the string
-DEC DWORD EDI           ; pointer--
-POP EBX 
-PUSH EBX 
-STD         ; set DF to decrement EDI
+dec dword edi               ; pointer--
+mov eax, dword [ebp - 4]
 .rev_loop:
-CMP EBX, EDI 
-JG .exit_rev_loop
-MOV BYTE DL, [EBX]    ; temp = buffer[bp]
-MOV BYTE DH, [EDI]
-MOV BYTE [EBX], DH 
-MOV BYTE [EDI], DL 
-DEC DWORD EDI 
-INC DWORd EBX 
-JMP .rev_loop
+cmp eax, edi 
+jg .exit_rev_loop
+mov dl, byte [eax]          ; temp = buffer[bp]
+mov dh, byte [edi]
+mov byte [eax], dh 
+mov byte [edi], dl 
+dec dword edi 
+inc dword eax 
+jmp .rev_loop
 .exit_rev_loop:
-POP EBX
-POP EDX 
-POP ECX
-POP EAX
-POPF
-RET 
+pop edi 
+leave 
+ret 
+.exit:
+mov byte [edi], 0
+pop edi 
+leave
+ret 
+
+itoa_chars: db "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz", 0
+
+; hashing constants
+%define fnv_prime 0x0100_0193
+%define fnv_offset_basis 0x811c_9dc5
+
+; move key pointer into esi
+; the input string must be null terminated
+; returns a hashed value of the provided string in EAX
+; int fnv32_1(char * str)
+fnv32_1:
+push ebp 
+mov ebp, esp 
+sub esp, 8
+push esi
+mov esi, dword [ebp + 8]
+mov dword [ebp - 4], fnv_offset_basis
+.hash_loop:
+lodsb 
+cmp al, 0
+je .hash_end
+mov byte [ebp - 8], al
+mov eax, dword [ebp - 4]
+mov edx, fnv_prime
+mul edx
+mov dword [ebp - 4], eax 
+movsx eax, byte [ebp - 8]
+xor dword [ebp - 4], eax
+jmp .hash_loop
+.hash_end:
+mov eax, dword [ebp - 4]
+pop esi 
+leave
+ret
+
+; check if two given strings are equal 
+; for a = a1, a2, a3 and b = b1, b2, b3
+; return true if a1 = b1, a2 = b2, a3 = b3
+; both strings have to be null terminated
+; RETURN: eax - boolean, true if equal else false
+string_equals:
+push ebp 
+mov ebp, esp
+.loop:
+mov edx, dword [ebp + 8]      ; load char from a
+movsx edx, byte [edx]
+mov eax, dword [ebp + 12]
+movsx eax, byte [eax]     ; load char from b
+cmp eax, edx 
+jnz .not_equal
+cmp eax, 0               ; both chars are equal only in two cases
+je .equal               ; if an = bn or an = bn = \0
+inc dword [ebp + 8]     ; increment pointers
+inc dword [ebp + 12]
+jmp .loop               ; check next chars if nesessary
+.equal:
+mov eax, 1 
+leave
+ret 
+.not_equal:
+xor eax, eax 
+leave
+ret
+
+; check if char is a digit
+; returns 1 if true else 0 in al
+is_a_digit:
+push ebp 
+mov ebp, esp 
+cmp byte [ebp + 8], 0x30
+js .not_a_digit
+cmp byte [ebp + 8], 0x39
+jg .not_a_digit
+mov eax, 1
+leave
+ret
+.not_a_digit:
+mov eax, 0
+leave
+ret
+; check if char in peek is a letter c >= 'A' && c <= 'z' || c >= 'a' && c <= 'z' || c == '_'
+; returns 1 if true else 0 in al
+is_a_letter:
+push ebp 
+mov ebp, esp 
+cmp byte [ebp + 8], 0x41   ; 'A'
+jl .check_lower 
+cmp byte [ebp + 8], 0x5A   ; 'Z'
+jg .check_lower 
+mov eax, 1
+jmp .exit
+.check_lower:
+cmp byte [ebp + 8], 0x61   ; 'a'
+jl .check_underscore
+cmp byte [ebp + 8], 0x7A   ; 'z'
+jg .check_underscore
+mov eax, 1
+jmp .exit
+.check_underscore:
+cmp byte [ebp + 8], 0x5F   ; '_'
+jnz .not_a_letter
+mov eax, 1 
+jmp .exit
+.not_a_letter:
+mov eax, 0
+.exit:
+leave
+ret
+
+; the symbol table
+; implements a basic hash map interface with fnv32_1 hashing algorithm 
+; with separate chaining
+; INVARIANT: returned value is a null_ptr iff the given key has appeared for the first time
+; otherwise the returned value is a pointer to a linked list of all cohashed items on the index
+
+; zeroes all entries for the supplied array
+; void array_sanitize(auto arr[], int size)
+array_sanitize:
+push ebp 
+mov ebp, esp 
+push edi 
+mov ecx, dword [ebp + 12] 
+mov eax, 0
+mov edi, dword [ebp + 8]
+rep stosd
+pop edi 
+leave
+ret
+
+; initializes class token into the symbol table
+; void symbol_table_init(table* table_ptr, char* key, int tag)
+symbol_table_init:
+push ebp 
+mov ebp, esp 
+push dword [ebp + 12]
+push dword [ebp + 16] 
+call get_token 
+add esp, 8
+push eax 
+push dword [ebp + 12]
+push dword [ebp + 8]
+call symbol_table_put
+add esp, 12
+leave
+ret 
+
+
+; puts the key, val pair into the symbol table
+; void symbol_table_put(symbol_table* table_ptr, char* key, token* token_ptr)
+symbol_table_put:
+push ebp 
+mov ebp, esp 
+sub esp, 16                 ; reserve 16 bytes (4 pointer variables)
+mov dword [ebp - 4], 600
+; [ebp - 4] = size
+; [ebp - 8] = index 
+; [ebp - 12] = list_node_ptr
+; [ebp - 16] = table_entry_ptr 
+; calculate index
+push dword [ebp + 12]
+call fnv32_1                ; get hash
+add esp, 4
+xor edx, edx
+div dword [ebp - 4]         ; hash % size
+mov dword [ebp - 8], edx 
+mov edx, dword [ebp - 8]
+shl edx, 2
+mov dword [ebp - 8], edx    ; save index
+
+; load list_node_ptr at table[index]
+mov edx, dword [ebp + 8]
+add edx, dword [ebp - 8]
+mov eax, dword [edx]
+mov dword [ebp - 12], eax   ; save list_node_ptr
+cmp dword [ebp - 12], 0
+je .free_index 
+.list_loop:
+mov eax, dword [ebp - 12]   ; load current node
+mov eax, dword [eax]        ; load list val, i.e. a table entry pointer
+mov dword [ebp - 16], eax   ; save table_entry_ptr
+mov eax, dword [eax]
+push eax 
+push dword [ebp + 12]
+call string_equals
+add esp, 8
+cmp eax, 1 
+je .entry_found
+mov eax, dword [ebp - 12]
+mov eax, dword [eax + 4]    ; load next_ptr
+cmp eax, 0
+je .resolve_collision
+mov dword [ebp - 12], eax   ; save list_node_ptr
+jmp .list_loop
+
+.resolve_collision:
+push dword [ebp + 16]
+push dword [ebp + 12]
+call get_entry
+add esp, 8
+push 0 
+push eax 
+call get_linked_list
+add esp, 8
+mov edx, eax 
+mov eax, dword [ebp - 12]
+push edx 
+push eax 
+call linked_list_append
+add esp, 8
+leave 
+ret 
+
+.free_index:
+push dword [ebp + 16]
+push dword [ebp + 12]
+call get_entry
+add esp, 8
+push 0
+push eax
+call get_linked_list
+add esp, 8
+mov edx, dword [ebp + 8]
+add edx, dword [ebp - 8]
+mov dword [edx], eax 
+leave
+ret 
+
+.entry_found:
+; update the value of the entry
+mov eax, dword [ebp - 16]
+mov edx, dword [ebp + 16]
+mov dword [eax + 4], edx 
+leave 
+ret
+
+; retrieves the value (token_ptr) for the supplied key from the symbol_table if present, 
+; otherwise returns null
+; token* symbol_table_get(table* table_ptr, char* key)
+symbol_table_get:
+push ebp 
+mov ebp, esp 
+sub esp, 16                 ; reserve 16 bytes (4 pointer variables)
+mov dword [ebp - 4], 600
+; [ebp - 4] = size
+; [ebp - 8] = index 
+; [ebp - 12] = list_node_ptr
+; [ebp - 16] = table_entry_ptr 
+; calculate index
+push dword [ebp + 12]
+call fnv32_1                ; get hash
+add esp, 4
+xor edx, edx
+div dword [ebp - 4]         ; hash % size
+shl edx, 2
+mov dword [ebp - 8], edx    ; save index
+
+; load list_node_ptr at table[index]
+mov edx, dword [ebp + 8]
+add edx, dword [ebp - 8]
+mov eax, dword [edx]
+mov dword [ebp - 12], eax   ; save list_node_ptr
+cmp dword [ebp - 12], 0
+je .free_index 
+.list_loop:
+mov eax, dword [ebp - 12]   ; load current node
+mov eax, dword [eax]        ; load list val, i.e. a table entry pointer
+mov dword [ebp - 16], eax   ; save table_entry_ptr
+mov eax, dword [eax]
+push eax 
+push dword [ebp + 12]
+call string_equals
+add esp, 8
+cmp eax, 1 
+je .entry_found
+mov eax, dword [ebp - 12]
+mov eax, dword [eax + 4]    ; load next_ptr
+cmp eax, 0
+je .entry_not_found
+mov dword [ebp - 12], eax   ; save list_node_ptr
+jmp .list_loop
+
+.entry_not_found:
+.free_index:
+xor eax, eax
+leave
+ret 
+
+.entry_found:
+; update the value of the entry
+mov eax, dword [ebp - 16]
+mov eax, dword [eax + 4]
+leave 
+ret
+
+; returns a new table entry object, with optional initial values
+
+; STRUCTURE: table_entry < char* prehash_key,  auto* value >
+; RETURN: entry_ptr
+get_entry:
+push ebp
+mov ebp, esp
+sub esp, 4
+push 8
+call heap_alloc
+add esp, 4
+mov dword [ebp - 4], eax 
+mov edx, dword [ebp + 8]
+mov eax, dword [ebp - 4]
+mov dword [eax], edx 
+mov edx, dword [ebp + 12]
+mov dword [eax + 4], edx 
+leave
+ret 

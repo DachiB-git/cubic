@@ -1,0 +1,4 @@
+S
+S -> a a R
+R -> c R
+R -> z
