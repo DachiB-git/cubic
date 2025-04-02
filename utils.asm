@@ -121,7 +121,7 @@ right_bracket: db ']', 0
 comma_sep: db ',', 0
 
 ; returns a token_ptr into eax, with initialized values 
-; STRUCTURE : num token => <tag, val>, basic token => <tag, null_ptr>, id token => <tag, symbol_table_ptr>
+; STRUCTURE : num token => <tag, val>, basic token => <tag, null_ptr>, id token => <tag, hash_map_ptr>
 ; token* get_token(int tag, auto value)
 get_token:
 push ebp
@@ -305,8 +305,6 @@ ret
 
 ; converts the given integer value into a null terminated string
 ; and stores into the buffer location
-; ebx - string buffer addr
-; ecx - value to be converted
 ; void itoa(int value, char* str, int base) 
 itoa:
 push ebp
@@ -475,12 +473,6 @@ mov eax, 0
 leave
 ret
 
-; the symbol table
-; implements a basic hash map interface with fnv32_1 hashing algorithm 
-; with separate chaining
-; INVARIANT: returned value is a null_ptr iff the given key has appeared for the first time
-; otherwise the returned value is a pointer to a linked list of all cohashed items on the index
-
 ; zeroes all entries for the supplied array
 ; void array_sanitize(auto arr[], int size)
 array_sanitize:
@@ -495,31 +487,69 @@ pop edi
 leave
 ret
 
-; initializes class token into the symbol table
-; void symbol_table_init(table* table_ptr, char* key, int tag)
-symbol_table_init:
-push ebp 
+; the symbol table
+; implements a basic hash map interface with fnv32_1 hashing algorithm 
+; with separate chaining
+; INVARIANT: returned value is a null_ptr iff the given key has appeared for the first time
+; otherwise the returned value is a pointer to a linked list of all cohashed items on the index
+
+; Doesn't currently implement a load factor setter since the optimum for separate chaining falls close to one
+; TODO: any official source on this would be nice
+; STRUCTURE: hash_map <(sizeof(value_size)*)[capacity] bucket, uint capacity, uint item_count> 
+; hash_map* get_hash_map(uint value_size, uint initial_capacity)
+get_hash_map:
+push ebp
 mov ebp, esp 
-push dword [ebp + 12]
-push dword [ebp + 16] 
-call get_token 
+sub esp, 16
+mov dword [ebp - 4], 1          ; size power of two
+mov eax, dword [ebp + 8]
+mov dword [ebp - 8], eax        ; bucket_size in bytes
+mov dword [ebp - 12], 0         ; hash_map pointer
+mov dword [ebp - 16], 0         ; bucket pointer
+; calculate the bucket size
+.size_calc:
+mov eax, dword [ebp - 4]        ; load size
+cmp eax, dword [ebp + 12]
+jge .end_size_calc
+shl eax, 1
+mov dword [ebp - 4], eax
+mov eax, dword [ebp - 8]
+add eax, eax 
+mov dword [ebp - 8], eax
+jmp .size_calc
+.end_size_calc:
+; get empty hash_map*
+push 12
+call heap_alloc
+add esp, 4
+mov dword [ebp - 12], eax 
+; alloc the bucket and clean it
+push dword [ebp - 8]
+call heap_alloc
+add esp, 4
+mov dword [ebp - 16], eax 
+push dword [ebp - 4]
+push dword [ebp - 16]
+call array_sanitize
 add esp, 8
-push eax 
-push dword [ebp + 12]
-push dword [ebp + 8]
-call symbol_table_put
-add esp, 12
+mov eax, dword [ebp - 12]
+mov edx, dword [ebp - 16]
+mov dword [eax], edx 
+mov edx, dword [ebp - 4]
+mov dword [eax + 4], edx 
+mov dword [eax + 8], 0
 leave
 ret 
 
-
-; puts the key, val pair into the symbol table
-; void symbol_table_put(symbol_table* table_ptr, char* key, token* token_ptr)
-symbol_table_put:
+; puts the key, val pair into the hash_map
+; void hash_map_put(hash_map* table_ptr, char* key, auto val)
+hash_map_put:
 push ebp 
 mov ebp, esp 
-sub esp, 16                 ; reserve 16 bytes (4 pointer variables)
-mov dword [ebp - 4], 600
+sub esp, 16                 ; reserve 16 bytes (4 variables)
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 4]
+mov dword [ebp - 4], eax    ; load hash_map capacity
 ; [ebp - 4] = size
 ; [ebp - 8] = index 
 ; [ebp - 12] = list_node_ptr
@@ -528,17 +558,19 @@ mov dword [ebp - 4], 600
 push dword [ebp + 12]
 call fnv32_1                ; get hash
 add esp, 4
-xor edx, edx
-div dword [ebp - 4]         ; hash % size
-mov dword [ebp - 8], edx 
-mov edx, dword [ebp - 8]
-shl edx, 2
-mov dword [ebp - 8], edx    ; save index
+push eax 
+push dword [ebp - 4]
+call get_index
+add esp, 8
+shl eax, 2
+mov dword [ebp - 8], eax
 
+.load_list:
 ; load list_node_ptr at table[index]
-mov edx, dword [ebp + 8]
-add edx, dword [ebp - 8]
-mov eax, dword [edx]
+mov eax, dword [ebp + 8]
+mov eax, dword [eax]
+add eax, dword [ebp - 8]
+mov eax, dword [eax]
 mov dword [ebp - 12], eax   ; save list_node_ptr
 cmp dword [ebp - 12], 0
 je .free_index 
@@ -565,14 +597,8 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 call get_entry
 add esp, 8
-push 0 
 push eax 
-call get_linked_list
-add esp, 8
-mov edx, eax 
-mov eax, dword [ebp - 12]
-push edx 
-push eax 
+push dword [ebp - 12]
 call linked_list_append
 add esp, 8
 leave 
@@ -588,6 +614,7 @@ push eax
 call get_linked_list
 add esp, 8
 mov edx, dword [ebp + 8]
+mov edx, dword [edx]
 add edx, dword [ebp - 8]
 mov dword [edx], eax 
 leave
@@ -601,14 +628,16 @@ mov dword [eax + 4], edx
 leave 
 ret
 
-; retrieves the value (token_ptr) for the supplied key from the symbol_table if present, 
+; retrieves the value (token_ptr) for the supplied key from the hash_map if present, 
 ; otherwise returns null
-; token* symbol_table_get(table* table_ptr, char* key)
-symbol_table_get:
+; token* hash_map_get(hash_map* table_ptr, char* key)
+hash_map_get:
 push ebp 
 mov ebp, esp 
 sub esp, 16                 ; reserve 16 bytes (4 pointer variables)
-mov dword [ebp - 4], 600
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 4]
+mov dword [ebp - 4], eax
 ; [ebp - 4] = size
 ; [ebp - 8] = index 
 ; [ebp - 12] = list_node_ptr
@@ -617,15 +646,19 @@ mov dword [ebp - 4], 600
 push dword [ebp + 12]
 call fnv32_1                ; get hash
 add esp, 4
-xor edx, edx
-div dword [ebp - 4]         ; hash % size
-shl edx, 2
-mov dword [ebp - 8], edx    ; save index
+push eax
+push dword [ebp - 4]
+call get_index
+add esp, 8
+shl eax, 2
+mov dword [ebp - 8], eax
 
+.load_list:
 ; load list_node_ptr at table[index]
-mov edx, dword [ebp + 8]
-add edx, dword [ebp - 8]
-mov eax, dword [edx]
+mov eax, dword [ebp + 8]
+mov eax, dword [eax]
+add eax, dword [ebp - 8]
+mov eax, dword [eax]
 mov dword [ebp - 12], eax   ; save list_node_ptr
 cmp dword [ebp - 12], 0
 je .free_index 
@@ -654,7 +687,7 @@ leave
 ret 
 
 .entry_found:
-; update the value of the entry
+; return the value of the entry
 mov eax, dword [ebp - 16]
 mov eax, dword [eax + 4]
 leave 
@@ -677,5 +710,45 @@ mov eax, dword [ebp - 4]
 mov dword [eax], edx 
 mov edx, dword [ebp + 12]
 mov dword [eax + 4], edx 
+leave
+ret 
+
+; uint get_index(uint size, uint hash)
+get_index:
+push ebp 
+mov ebp, esp 
+sub esp, 4
+mov dword [ebp - 4], 0      ; bit_count
+mov eax, dword [ebp + 8]
+.get_bit_count:
+shr eax, 1
+jc .got_count
+inc dword [ebp - 4]
+jmp .get_bit_count
+.got_count:
+; get index through xor folding 
+mov cl, byte [ebp - 4]
+mov eax, dword [ebp + 12]
+shr eax, cl                 ; hash >> bit_count
+cmp dword [ebp - 4], 16     ; 16-bit word
+jge .mask
+.tiny_mask:
+xor eax, dword [ebp + 12]   ; (hash >> bit_count) ^ hash
+mov edx, dword [ebp + 8]
+dec edx                     ; get mask
+and eax, edx                ; ((hash >> bit_count) ^ hash) & mask
+leave
+ret
+.mask:
+cmp dword [ebp - 4], 32 ; 32-bit word
+je .exit
+mov edx, dword [ebp + 8]
+dec edx                     ; get mask
+and edx, dword [ebp + 12]   ; hash & mask
+xor eax, edx                ; (hash >> bit_count) ^ (hash & mask)
+leave
+ret
+.exit
+mov eax, dword [ebp + 12]
 leave
 ret 

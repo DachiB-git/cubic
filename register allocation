@@ -1,0 +1,17 @@
+a * b + c * d
+mov eax, dword [a_addr]
+imul eax, dword [b_addr]
+mov edx, eax
+mov eax, dword [c_addr]
+imul eax, dword [d_addr]
+add eax, edx
+leave
+ret
+
+a * b + arr[10] * d
+mov eax, dword [a_addr]
+imul eax, dword [b_addr]
+mov edx, eax
+mov eax, dword [arr_addr + 10 * sizeof(arr[0])]
+imul eax, dword [d_addr]
+add eax, edx

@@ -2,7 +2,7 @@
 [org 0x7C00]
 %define drive_read_buffer 0x0000_7E00
 %define boot_drive_ptr 0x0000_0500
-%define source_code_start 0x0000_C000
+%define source_code_start 0x0000_C200
 %define frame_buffer_ptr 0x000B_8000
 
 ; boot sector and BPB declarations
@@ -25,7 +25,7 @@ BS_DrvNum:          db 0x00
 BS_Reserved1:       db 0
 BS_BootSig:         db 0x29
 BS_VolID:           dd 0
-BS_VolLab:          db "FLOPPY 1   "
+BS_VolLab:          db "FLOPPY     "
 BS_FileSysType:     db "FAT12   "
 
 boot_code:
@@ -49,7 +49,7 @@ int 0x10
 ; ref : dragon pg 138 3.2 input buffering
 read_sectors:
 mov ah, 0x02    ; function
-mov al, 35      ; sector_count
+mov al, 40      ; sector_count
 mov ch, 0x00    ; low eight bits of cylinder
 mov cl, 0x02    ; sector after vbr and second boot, upper two bits cylinder hdd only
 mov dh, 0x00    ; head
@@ -148,8 +148,6 @@ mov dword [heap_ptr], 0x3000_0000
 
 call main
 mov ebx, eax 
-push nl 
-call print_string
 push exit_success
 call print_string
 push 10
@@ -162,11 +160,11 @@ jmp $
 
 main:
 push ebp
-mov ebp, esp 
-; TODO: chagne parse tree structure and update printing method
+mov ebp, esp
+; TODO: change parse tree structure and update printing method
 call compiler_compile
 ; call lspci
-xor eax, eax 
+xor eax, eax
 leave
 ret
 
@@ -428,4 +426,4 @@ true: db "strings are equal", 0
 false: db "strings are not equal", 0
 nl: db 10, 0
 null: db "NULL", 0
-times 17408 - ($ - $$) db 0
+times 17920 - ($ - $$) db 0

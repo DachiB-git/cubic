@@ -1,5 +1,5 @@
-%define EPSILON -1 
-%define EOF 0
+%define EPSILON 0 
+%define EOF -1
 %define NAME  256
 %define NUM 257
 %define INTEGER 258
@@ -72,9 +72,9 @@ RFuDS -> FuD RFuDS | eps                        // first(RFuDS) = {func, eps}
                                                 // follow(RFuDS) = {$}
 FuD -> func Ty Na ( PaDS ) { VaDS body }        // first(FuD) = {func}
                                                 // follow(FuD) = {func}
-PaD -> Ty PadTyDeco Na                          // first(PaD) = {int, uint, bool, char, TyNa}
+PaD -> Ty PaDTyDeco Na                          // first(PaD) = {int, uint, bool, char, TyNa}
                                                 // follow(PaD) = {,}
-PaDTyDeco -> PDeco PaDArrDeco | eps             // first(PadTyDeco) = {[, * , eps}
+PaDTyDeco -> PDeco PaDArrDeco | eps             // first(PaDTyDeco) = {[, * , eps}
                                                 // follow(PaDTyDeco) = {Na}
 PaDArrDeco -> [] PaDArrDeco | eps               // first(PaDArrDeco) = {[, eps}
                                                 // follow(PaDArrDeco) = {Na}

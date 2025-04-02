@@ -49,7 +49,7 @@ mov dword [ebp - 24], edx   ; pointer = state.pointer
 mov edx, dword [eax + 8]
 mov dword [ebp - 28], edx   ; str_builder_ptr = state.str_builder_ptr
 mov edx, dword [eax + 12]   
-mov dword [ebp - 32], edx   ; tabple_ptr = state.table_ptr
+mov dword [ebp - 32], edx   ; table_ptr = state.table_ptr
 mov edx, dword [eax + 16]
 mov dword [ebp - 36], edx   ; line = state.line
 mov edx, dword [eax + 20]
@@ -171,7 +171,7 @@ mov dword [ebp - 48], eax
 ; check if lexeme present in symbol_table
 push dword [ebp - 48]
 push dword [ebp - 32]
-call symbol_table_get
+call hash_map_get
 add esp, 8
 mov dword [ebp - 52], eax   ; save the return token
 cmp eax, 0 
@@ -233,7 +233,7 @@ mov dword [ebp - 52], eax
 push dword [ebp - 52]
 push dword [ebp - 48]
 push dword [ebp - 32]
-call symbol_table_put
+call hash_map_put
 add esp, 12
 ; string_builder clean up
 lea eax, dword [ebp - 16]

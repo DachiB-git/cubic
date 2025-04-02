@@ -1,0 +1,99 @@
+TypeEntry {
+    key: string
+    complexity: Enum(PRIMITIVE, SIMPLE, POINTER, ARRAY)
+}
+
+PrimitiveTypeEntry(TypeEntry) {
+    type: Enum(INT, UINT, BOOL, CHAR)
+}
+
+SimpleTypeEntry(TypeEntry) {
+    type: TypeEntry
+}
+
+CompositeTypeEntry(TypeEntry) {
+    type: TypeEntry
+}
+
+// not present in the table, only a local construct to a specific entry, located on the heap
+// used for pointer/array type chaining
+// prim_type** type_name -> {type_name, * } -> {null, *} -> prim_type 
+AnonymousTypeEntry(CompositeTypeEntry) {
+    key: 
+}
+// only if type == ARRAY
+ArrayTypeEntry(CompositeTypeEntry):
+    size: UINT 
+typedef int int_t;
+typedef int_t* int_p;
+typedef int* int_p;     // will rewrite the key 'int_p' to a new entry
+typedef int* int_sp;    
+typedef int[2] pair;
+typedef pair* pairs;
+typedef int*[2] p_pair;
+
+int -> TypeEntry {
+    key: "int"
+    complexity: PRIMITIVE
+    type: INT
+}
+
+int_t -> TypeEntry {
+    key: "int_t"
+    complexity: SIMPLE  // since no pointer or arr decorator following the Ty
+    type: TypeTable.get("int")
+}
+
+int_p -> TypeEntry {
+    key: "int_p"
+    complexity: COMPOSITE
+    type: POINTER
+    child_type: TypeTable.get("int_t")
+}
+
+int_sp -> TypeEntry {
+    key: "int_sp"
+    complexity: COMPOSITE
+    type: POINTER
+    child_type: INT
+}
+
+pair -> TypeEntry {
+    key: "pair"
+    complexity: COMPOSITE
+    type: ARRAY
+    size: 2
+    child_type: TypeTable.get("int")
+}
+
+pairs -> TypeEntry {
+    key: "pairs"
+    complexity: COMPOSITE
+    type: POINTER
+    child_type: TypeTable.get("pair")
+}
+
+
+p_pair -> TypeEntry {
+    key: "p_pair"
+    complexity: COMPOSITE
+    type: ARRAY
+    size: 2
+    child_type: 
+}
+type: array
+child_type: int
+
+VarEntry {
+    key: string
+    type: TypeEntry | AnonymousTypeEntry
+}
+
+
+FuncEntry {
+    key: string
+    return_type: TypeEntry
+    variables: VarTable 
+    parameters: ParamTable
+    body: body
+}

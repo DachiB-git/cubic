@@ -6,11 +6,11 @@
 %define jump_table_size terminals*nonterminals*4
 %define word_map_size 66 * 4
 
-; void parser_parse(lexer_state* state, table* table_ptr)
+; void parser_parse(lexer_state* state, table* symbol_table_ptr)
 parser_parse:
 push ebp 
 mov ebp, esp 
-sub esp, jump_table_size        ; jump_table with 300 free indexes per 41 nonterminals
+sub esp, jump_table_size            ; jump_table with 300 free indexes per 41 nonterminals
 sub esp, 32                       
 sub esp, word_map_size
 
@@ -35,6 +35,7 @@ lea eax, dword [ebp - jump_table_size]
 push eax
 call load_jump_table
 add esp, 4
+
 
 push dword [ebp + 8]
 call lexer_get_token
@@ -79,7 +80,7 @@ jne .check_if_terminal
 add esp, 4
 
 mov eax, dword [ebp - jump_table_size - 4]
-cmp dword [eax], NUM
+cmp dword [eax], NAME
 jge .nonterm_token
 push 0
 jmp .end_check
@@ -177,14 +178,14 @@ add esp, 4
 mov edx, dword [ebp - jump_table_size - 24]
 mov dword [eax], edx 
 jmp .parse_loop
-.error: 
+.error:
+lea eax, dword [ebp - jump_table_size - 32 - word_map_size]
+push eax
 mov eax, dword [ebp - jump_table_size - 4]
-push 10 
-push itoa_buffer
 push dword [eax]
-call itoa 
-add esp, 12 
-push itoa_buffer
+call tag_to_str
+add esp, 4
+push eax 
 call print_string
 add esp, 4
 push nl 
@@ -213,14 +214,11 @@ add esp, 4
 push nl 
 call print_string
 add esp, 4
+xor eax, eax
+leave
+ret
 .end_parsing:
-
-; analyze the constructed parse tree 
-lea eax, dword [ebp - jump_table_size - 32 - word_map_size]
-push eax 
-push dword [ebp - jump_table_size - 20] 
-call print_tree
-add esp, 8
+mov eax, dword [ebp - jump_table_size - 20]
 leave
 ret
 
@@ -3556,6 +3554,7 @@ jmp .exit
 .exit:
 leave
 ret 
+
 
 
 ; %define EPSILON -1
