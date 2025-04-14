@@ -110,6 +110,7 @@ sub esp, 72
 ; [ebp - 56] = type_table
 ; [ebp - 60] = var_table
 ; [ebp - 64] = func_table
+; [ebp - 68], [ebp - 72] = misc
 mov dword [ebp - 44], 0                     ; func_detect
 mov dword [ebp - 40], 0                     ; type_detect
 mov dword [ebp - 36], 1                     ; line_counter
@@ -176,141 +177,78 @@ push char_k
 push dword [ebp - 52]
 call symbol_table_init
 add esp, 12
-; push TYPEDEF
-; push typedef_k
-; push dword [ebp - 52]
-; call symbol_table_init
-; add esp, 12
-; push IF
-; push if_k
-; push dword [ebp - 52]
-; call symbol_table_init
-; add esp, 12
-; push ELSE
-; push else_k
-; push dword [ebp - 52]
-; call symbol_table_init
-; add esp, 12
-; push WHILE
-; push while_k
-; push dword [ebp - 52]
-; call symbol_table_init
-; add esp, 12
-; push DO
-; push do_k
-; push dword [ebp - 52]
-; call symbol_table_init
-; add esp, 12
-; push STRUCT
-; push struct_k
-; push dword [ebp - 52]
-; call symbol_table_init
-; add esp, 12
-; push RETURN 
-; push return_k
-; push dword [ebp - 52]
-; call symbol_table_init
-; add esp, 12
-; push FUNC 
-; push func_k
-; push dword [ebp - 52]
-; call symbol_table_init
-; add esp, 12
-; push TRUE 
-; push true_k
-; push dword [ebp - 52]
-; call symbol_table_init
-; add esp, 12
-; push FALSE 
-; push false_k
-; push dword [ebp - 52]
-; call symbol_table_init
-; add esp, 12
-
-push TYNAME
-push int_t
+push TYPEDEF
+push typedef_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push IF
+push if_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push ELSE
+push else_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push WHILE
+push while_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push DO
+push do_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push STRUCT
+push struct_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push RETURN 
+push return_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push FUNC 
+push func_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push TRUE 
+push true_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push FALSE 
+push false_k
 push dword [ebp - 52]
 call symbol_table_init
 add esp, 12
 
-
-; push 0
-; push 1
-; call get_token
-; add esp, 8
-; push 0
-; push eax 
-; call get_linked_list
-; add esp, 8
-; mov dword [ebp - 72], eax 
-; push 0
-; push 2
-; call get_token
-; add esp, 8
-; push eax
-; push dword [ebp - 72]
-; call linked_list_append
-; add esp, 8
-
-mov eax, dword [ebp - 52]
-mov ecx, dword [eax + 4]
-mov eax, dword [eax]
-.loop:
-cmp ecx, 0
-je .exit 
-dec ecx
-mov dword [ebp - 68], eax
-cmp dword [eax], 0
-jne .print 
-add eax, 4
-jmp .loop
-.print:
-mov eax, dword [eax]
-mov [ebp - 72], eax 
-.l_loop:
-mov eax, dword [ebp - 72]
-cmp eax, 0
-je .next
-mov edx, dword [eax + 4]
-mov dword [ebp - 72], edx
-mov eax, dword [eax]
-mov eax, dword [eax + 4]
-push eax 
-call print_token
-add esp, 4
-push space
-call print_string
-add esp, 4
-jmp .l_loop
-.next:
-push nl 
-call print_string
-add esp, 4
-mov eax, dword [ebp - 68]
-add eax, 4
-jmp .loop
-
 ; init type table with primitives
-; push INTEGER
-; push integer_k
-; push dword [ebp - 56]
-; call type_table_init
-; add esp, 12
-; push UINTEGER
-; push uinteger_k
-; push dword [ebp - 56]
-; call type_table_init
-; add esp, 12
-; push CHAR
-; push char_k
-; push dword [ebp - 56]
-; call type_table_init
-; add esp, 12
-; push BOOL
-; push bool_k
-; push dword [ebp - 56]
-; call type_table_init
-; add esp, 12
+push INTEGER
+push integer_k
+push dword [ebp - 56]
+call type_table_init
+add esp, 12
+push UINTEGER
+push uinteger_k
+push dword [ebp - 56]
+call type_table_init
+add esp, 12
+push CHAR
+push char_k
+push dword [ebp - 56]
+call type_table_init
+add esp, 12
+push BOOL
+push bool_k
+push dword [ebp - 56]
+call type_table_init
+add esp, 12
 
 
 lea eax, dword [ebp - 28]
@@ -320,46 +258,41 @@ add esp, 4
 mov dword [ebp - 48], eax 
 cmp dword [ebp - 48], 0
 je .exit
-; lea eax, dword [ebp - 44 - 4 - 2400 * 4]
-; push eax 
-; lea eax, dword [ebp - 44 - 4 - 2400 * 3]
-; push eax 
-; lea eax, dword [ebp - 44 - 4 - 2400 * 2]
-; push eax 
-; push dword [ebp - 48]
-; call analyzer
-; add esp, 16
 
-.exit:
-mov eax, 0x3000_0145
+push dword [ebp - 64]   ; func_table
+push dword [ebp - 60]   ; var_table
+push dword [ebp - 56]   ; type_table
+push dword [ebp - 48]   ; parse_tree root
+call analyzer
+add esp, 16
+cmp eax, 0              ; semantic error detected
+je .exit
+mov eax, dword [ebp - 64]
+mov eax, dword [eax]        ; load first pointer
+mov dword [ebp - 68], eax 
+mov eax, dword [ebp - 64]
 mov eax, dword [eax + 4]
-mov eax, dword [eax]
-mov eax, dword [eax + 4]
-push eax 
-call print_token
+mov dword [ebp - 72], eax   ; load capacity
+.func_loop:
+cmp dword [ebp - 72], 0
+je .end_func_loop
+dec dword [ebp - 72]
+mov eax, dword [ebp - 68]
+cmp dword [eax], 0
+jne .print_list
+add dword [ebp - 68], 4
+jmp .func_loop
+.print_list:
+push dword [eax]
+call print_linked_list
 add esp, 4
-push nl
+push nl 
 call print_string
 add esp, 4
-; push 16
-; push itoa_buffer
-; push eax 
-; call itoa
-; add esp, 12
-; push itoa_buffer
-; call print_string
-; add esp, 4
-; push nl
-; call print_string
-; add esp, 4
-; push eax 
-; call print_linked_list
-; add esp, 4
-; push nl
-; call print_string
-; add esp, 4
-; mov eax, 0x3000_019d
-; mov eax, dword [eax + 4]
+add dword [ebp - 68], 4
+jmp .func_loop
+.end_func_loop:
+.exit:
 leave 
 ret
 
@@ -397,14 +330,12 @@ add esp, 12
 leave
 ret 
 
-leave
-ret 
-
 parsing_done: db "PARSING SUCCESSFULL", 10, 0
 int_t: db "int_t", 0
 int_p: db "int_p", 0
 pairs_t: db "pairs_t", 0
 pointer_k: db "pointer", 0
+my_var: db "my_var", 0
 
 ; reserved words
 char_k: db "char", 0
@@ -421,6 +352,7 @@ bool_k: db "bool", 0
 func_k: db "func", 0
 true_k: db "true", 0
 false_k: db "false", 0
+EOF_k: db "EOF", 0
 %include "io.asm"
 %include "utils.asm"
 %include "lexer.asm"
