@@ -93,7 +93,6 @@ VarEntry {
 FuncEntry {
     key: string
     return_type: TypeEntry
-    variables: VarTable 
-    parameters: ParamTable
+    variables: VarTable         ; includes both parameters and local variables
     body: body
 }

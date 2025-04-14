@@ -6,7 +6,7 @@
 %define jump_table_size terminals*nonterminals*4
 %define word_map_size 66 * 4
 
-; void parser_parse(lexer_state* state, table* symbol_table_ptr)
+; void parser_parse(lexer_state* state)
 parser_parse:
 push ebp 
 mov ebp, esp 
@@ -41,12 +41,14 @@ push dword [ebp + 8]
 call lexer_get_token
 add esp, 4
 
+
 mov dword [ebp - jump_table_size - 4], eax      ; cache cur_token
 mov dword [ebp - jump_table_size - 12], 0
 mov dword [ebp - jump_table_size - 16], 0       ; init parse_tree stack
 mov dword [ebp - jump_table_size - 20], 0       ; init parse_tree root
 mov dword [ebp - jump_table_size - 24], 0       ; new node variable
 mov dword [ebp - jump_table_size - 28], 0       ; new node child count
+
 
 lea eax, dword [ebp - jump_table_size - 20]
 push eax 
@@ -221,6 +223,14 @@ ret
 mov eax, dword [ebp - jump_table_size - 20]
 leave
 ret
+
+.unexpected_eof:
+push error_unexpected_eof
+call print_string
+add esp, 4
+xor eax, eax
+leave
+ret 
 
 ; void load_word_map(char* word_map)
 load_word_map:
@@ -768,7 +778,7 @@ ret
 
 
 ; TyDeco -> PDeco ArrDeco | eps                   // first(TyDeco) = {[, *, eps}
-                                                ; // follow(TyDeco) = {TyNa, Na}
+                                                ; // follow(TyDeco) = {TyNa, Na, FuncNa}
 init_TyDeco:
 push ebp 
 mov ebp, esp 
@@ -805,11 +815,17 @@ push TyDeco
 push dword [ebp + 8]
 call jump_table_init
 add esp, 16
+push EPSILON
+push FUNCNAME
+push TyDeco
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
 leave
 ret 
 
 ; PDeco -> * PDeco | eps                          // first(PDeco) = {*, eps}
-                                                ; // follow(PDeco) = {[, TyNa, Na}
+                                                ; // follow(PDeco) = {[, TyNa, Na, FuncNa}
 init_PDeco:
 push ebp 
 mov ebp, esp 
@@ -847,11 +863,17 @@ push PDeco
 push dword [ebp + 8]
 call jump_table_init
 add esp, 16
+push EPSILON
+push FUNCNAME
+push PDeco 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
 leave
 ret 
 
 ; ArrDeco -> [Num] ArrDeco | eps                  // first(ArrDeco) = {[, eps}
-                                                ; // follow(ArrDeco) = {TyNa, Na}
+                                                ; // follow(ArrDeco) = {TyNa, Na, FuncNa}
 init_ArrDeco:
 push ebp
 mov ebp, esp 
@@ -887,6 +909,12 @@ call jump_table_init
 add esp, 16
 push EPSILON
 push NAME
+push ArrDeco
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push FUNCNAME
 push ArrDeco
 push dword [ebp + 8]
 call jump_table_init
@@ -1088,7 +1116,7 @@ leave
 ret 
 
 
-; FuD -> func Ty FuncNa ( PaDS ) { VaDS body }        // first(FuD) = {func}
+; FuD -> func Ty TyDeco Na ( PaDS ) { VaDS body } // first(FuD) = {func}
                                                     ; // follow(FuD) = {func}
 init_FuD:
 push ebp 
@@ -1100,6 +1128,10 @@ call get_linked_list
 add esp, 8
 mov dword [ebp - 4], eax 
 push Ty 
+push dword [ebp - 4]
+call linked_list_append
+add esp, 8
+push TyDeco
 push dword [ebp - 4]
 call linked_list_append
 add esp, 8
@@ -1544,7 +1576,7 @@ leave
 ret 
 
 ; St -> if ( GenE ) { StS } MatchedElse           // first(St) = {Na, if, while, do, FuncNa}
-; St -> while ( GenE ) { StS }                    // follow(St) = {Na, if, while, do, FuncNa}
+; St -> while ( GenE ) { StS }                    // follow(St) = {Na, if, while, do, FuncNa, return, } }
 ; St -> do { StS } while ( GenE ) ;
 ; St -> id = GenE ;                              
 ; St -> FuncNa (ArgS) ;  
@@ -1724,7 +1756,7 @@ ret
 
 
 ; MatchedElse -> else { StS } | eps               // first(MatchedElse) = {else, eps}
-                                                ; // follow(MatchedElse) = {Na, if, while, do, FuncNa}
+                                                ; // follow(MatchedElse) = {Na, if, while, do, FuncNa, return, }}
 init_MatchedElse:
 push ebp 
 mov ebp, esp 
@@ -1778,6 +1810,18 @@ call jump_table_init
 add esp, 16
 push EPSILON
 push FUNCNAME
+push MatchedElse
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push RETURN
+push MatchedElse
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x7D ; }
 push MatchedElse
 push dword [ebp + 8]
 call jump_table_init
@@ -3512,7 +3556,7 @@ add esp, 12
 push itoa_buffer
 call print_string
 add esp, 4
-push nl 
+push nl
 call print_string
 add esp, 4
 .exit:
@@ -3611,6 +3655,7 @@ error_undefined_type: db 'ERROR: undefined type', 0
 error_illegal_decorator: db 'ERROR: illegal decorator, expected "[E]", "*"', 0
 error_missing_semicolon: db 'ERROR: expected semicolon at the end of statement', 0
 error_illegal_type_name: db 'ERROR: illegal type name', 0
+error_unexpected_eof: db "ERROR: unexpected EOF reached while parsing", 10, 0
 error_tail: db ' at line ', 0
 finish: db 'Finished parsing', 10, 0
 error_line: db 'Error on line: ', 0
