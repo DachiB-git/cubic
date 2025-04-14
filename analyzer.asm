@@ -1,9 +1,8 @@
 %define PRIMITIVE 0
 %define SIMPLE 1
-%define COMPOSITE 2
-%define POINTER 3
-%define ARRAY 4
-
+%define POINTER 2
+%define ARRAY 3
+%define STRUCT 4
 
 ; bool analyzer(Tree_Node* root, table* type_table, table* var_table, table* func_table)
 analyzer:
@@ -48,11 +47,14 @@ lea eax, dword [eax + 12]   ; load children baddr
 mov edx, dword [eax + 4]    ; load next VaDS
 mov dword [ebp - 4], edx    ; save next VaDS
 mov eax, dword [eax]        ; load VaD
+push 0
 push dword [ebp + 16]
 push dword [ebp + 12]
 push eax 
 call add_var
-add esp, 12
+add esp, 16
+cmp eax, 0  ; error while adding var
+je .error_exit
 jmp .declared_vars_loop
 .no_vars_declared:
 ; add all declared functios to func_table
@@ -64,11 +66,48 @@ mov dword [ebp - 4], eax    ; save FuDS
 mov eax, dword [ebp - 4]
 cmp dword [eax + 8], 0
 je .exit
-
+lea eax, dword [eax + 12]
+mov edx, dword [eax + 4]   ; load next FuDS
+mov dword [ebp - 4], edx   ; save FuDS
+mov eax, dword [eax]       ; load FuD
+push dword [ebp + 20]
+push dword [ebp + 16]
+push dword [ebp + 12]
+push eax 
+call add_func
+add esp, 16
+cmp eax, 0      ; error while adding func
+je .error_exit
+jmp .declared_funcs_loop
 .exit:
 mov eax, 1
 leave
 ret 
+.error_exit:
+xor eax, eax
+leave
+ret
+
+; entry* get_func_entry(char* key, entry* r_type, hash_map* var_table, Tree_node* body)
+get_func_entry:
+push ebp
+mov ebp, esp 
+sub esp, 4
+push 16
+call heap_alloc
+add esp, 4
+mov dword [ebp - 4], eax
+mov eax, dword [ebp - 4]
+mov edx, dword [ebp + 8]
+mov dword [eax], edx 
+mov edx, dword [ebp + 12]
+mov dword [eax + 4], edx 
+mov edx, dword [ebp + 16]
+mov dword [eax + 8], edx 
+mov edx, dword [ebp + 20]
+mov dword [eax + 12], edx
+leave
+ret
 
 ; entry* get_primitive_entry(char* key, int type)
 get_primitive_entry:
@@ -144,20 +183,12 @@ mov dword [eax + 12], edx
 leave
 ret 
 
-; entry* get_function_entry(char* key, entry* r_type, table* param_table, table* var_table, Tree_node body)
-get_function_entry:
-push ebp 
-mov ebp, esp 
-
-leave 
-ret 
-
-; void construct_type(Tree_node* node, table* type_table)
+; entry* construct_type(Tree_node* node, hash_map* type_table)
 construct_type:
 push ebp
 mov ebp, esp
 sub esp, 24 
-mov dword [ebp - 4], 0      ; TE|VaD pointer
+mov dword [ebp - 4], 0      ; TE pointer
 mov dword [ebp - 8], 0      ; new_name_lexeme pointer
 mov dword [ebp - 12], 0     ; ref_type_lexeme pointer
 mov dword [ebp - 16], 0     ; TyDeco pointer
@@ -167,19 +198,26 @@ mov eax, dword [ebp + 8]
 mov dword [ebp - 4], eax    ; save TE|VaD
 lea eax, dword [eax + 12]   ; get TE children
 mov edx, dword [eax]
+cmp dword [edx], FUNC       ; check if func type
+jne .not_a_func
+mov edx, dword [eax + 4]    ; load Ty
+mov dword [ebp - 28], edx   ; save Ty 
+mov edx, dword [eax + 8]    ; load TyDeco
+mov dword [ebp - 32], edx   ; save TyDeco
+.not_a_func:
 cmp dword [edx], STRUCT     ; check if TE is a struct
 jne .not_a_struct
 mov eax, dword [eax + 4]    ; get TyNa
 jmp .end_check
 .not_a_struct:
-mov eax, dword [eax + 8]    ; get TyNa
+mov eax, dword [eax + 8]    ; get TyNa|Na
 .end_check: 
 mov eax, dword [eax + 4]    ; get token
 mov eax, dword [eax + 4]    ; get lexeme
-mov dword [ebp - 8], eax   ; save new_type_lexeme
+mov dword [ebp - 8], eax   ; save new_type_lexeme|new_var_lexeme
 ; detect type complexity
 ; get ref_type_lexeme
-mov eax, dword [ebp - 4]    ; load TE 
+mov eax, dword [ebp - 4]    ; load TE|VaD 
 mov eax, dword [eax + 12]   ; load Ty
 mov eax, dword [eax + 12]   ; load child
 mov eax, dword [eax + 4]    ; load token
@@ -242,7 +280,6 @@ jmp .array_loop
 mov eax, dword [ebp - 8]
 mov edx, dword [ebp - 20]
 mov dword [edx], eax 
-push edx
 mov eax, edx
 leave
 ret
@@ -259,7 +296,114 @@ add esp, 8
 leave
 ret
 
-; void add_type(Tree_node* node, table* type_table)
+
+; entry* construct_var(Tree_node* node, hash_map* type_table)
+construct_var:
+push ebp
+mov ebp, esp
+sub esp, 24 
+mov dword [ebp - 4], 0      ; VaD pointer
+mov dword [ebp - 8], 0      ; new_name_lexeme pointer
+mov dword [ebp - 12], 0     ; type_lexeme pointer
+mov dword [ebp - 16], 0     ; TyDeco pointer
+mov dword [ebp - 20], 0     ; composite contruction entry pointer
+mov dword [ebp - 24], 0     ; Decorator pointer
+mov eax, dword [ebp + 8]
+mov dword [ebp - 4], eax    ; save VaD
+lea eax, dword [eax + 12]   ; get VaD children
+mov eax, dword [eax + 8]    ; load Na
+mov eax, dword [eax + 4]    ; get token
+mov eax, dword [eax + 4]    ; load lexeme
+mov dword [ebp - 8], eax    ; save new_var_lexeme
+; detect type complexity
+; get type_lexeme
+mov eax, dword [ebp - 4]    ; load VaD 
+mov eax, dword [eax + 12]   ; load Ty
+mov eax, dword [eax + 12]   ; load child
+mov eax, dword [eax + 4]    ; load token
+mov eax, dword [eax + 4]    ; load lexeme
+mov dword [ebp - 12], eax   ; save type_lexeme
+push dword [ebp - 12]
+push dword [ebp + 12]
+call hash_map_get
+add esp, 8
+mov dword [ebp - 20], eax   ; save type entry
+; start chain construction of pointer/array types
+mov eax, dword [ebp - 4]    ; load VaD
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 4]    ; load TyDeco 
+mov dword [ebp - 16], eax   ; save TyDeco
+cmp dword [eax + 8], 0      ; check if any decorators are present
+je .simple_type
+; go over the pointer chains
+mov eax, dword [eax + 12]   ; load PDeco
+mov dword [ebp - 24], eax   ; save PDeco
+.pointer_loop:
+mov eax, dword [ebp - 24]
+cmp dword [eax + 8], 0
+je .check_arrays
+push dword [ebp - 20]
+push pointer
+call get_composite_p_entry
+add esp, 8
+mov dword [ebp - 20], eax
+mov eax, dword [ebp - 24]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov dword [ebp - 24], eax
+jmp .pointer_loop
+.check_arrays:
+mov eax, dword [ebp - 16]   ; load TyDeco
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]    ; load ArrDeco
+mov dword [ebp - 24], eax   ; save ArrDeco
+.array_loop:
+mov eax, dword [ebp - 24]
+cmp dword [eax + 8], 0
+je .composite_type
+cmp dword [eax + 8], 2
+je .parameter_arr
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 4]    ; load Num node
+mov eax, dword [eax + 4]    ; load token
+mov eax, dword [eax + 4]    ; load lexeme
+push eax 
+jmp .end_check
+.parameter_arr:
+push 0
+.end_check:
+push dword [ebp - 20]
+push array
+call get_composite_arr_entry
+add esp, 12
+mov dword [ebp - 20], eax
+mov eax, dword [ebp - 24]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 12]
+mov dword [ebp - 24], eax
+jmp .array_loop
+.composite_type:
+mov eax, dword [ebp - 8]
+mov edx, dword [ebp - 20]
+mov dword [edx], eax 
+mov eax, edx
+leave
+ret
+; declare simple type
+.simple_type:
+push dword [ebp - 12]
+push dword [ebp + 12]
+call hash_map_get
+add esp, 8
+push eax 
+push dword [ebp - 8]
+call get_simple_entry
+add esp, 8
+leave
+ret
+
+
+; bool add_type(Tree_node* node, hash_map* type_table)
 add_type:
 push ebp 
 mov ebp, esp
@@ -283,7 +427,7 @@ leave
 ret 
 
 
-; void add_var(Tree_node* node, table* type_table, table* var_table)
+; bool add_var(Tree_node* node, hash_map* type_table, hash_map* var_table, Tree_node* parent)
 add_var:
 push ebp 
 mov ebp, esp 
@@ -293,7 +437,7 @@ lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
 mov eax, dword [eax + 4]
 mov eax, dword [eax + 4]
-mov dword [ebp - 4], eax 
+mov dword [ebp - 4], eax
 push eax 
 push dword [ebp + 16]
 call hash_map_get
@@ -302,16 +446,20 @@ cmp eax, 0
 jne .var_redeclaration
 push dword [ebp + 12]
 push dword [ebp + 8]
-call construct_type
+call construct_var
 add esp, 8
 push eax 
 push dword [ebp - 4]
 push dword [ebp + 16]
 call hash_map_put
 add esp, 12 
+mov eax, 1
 leave
 ret
 .var_redeclaration:
+cmp dword [ebp + 20], 0 ; if null parent, gm redeclaration
+jne .func_redeclaration
+.gm_var_redeclaration:
 push var_red
 call print_string
 add esp, 4
@@ -324,61 +472,328 @@ add esp, 4
 xor eax, eax 
 leave
 ret
+.func_redeclaration:
+mov eax, dword [ebp + 8]
+cmp dword [eax], PaD        ; param redeclaration
+jne .func_var_redeclaration
+.func_param_redeclaration:
+push param_red
+call print_string
+add esp, 4
+push dword [ebp - 4]
+call print_string
+add esp, 4
+push var_red_func
+call print_string
+add esp, 4
+; load function name
+mov eax, dword [ebp + 20]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [eax + 4]
+call print_string
+add esp, 4
+push nl 
+call print_string
+add esp, 4
+xor eax, eax
+leave
+ret
+.func_var_redeclaration:
+push var_red
+call print_string
+add esp, 4
+push dword [ebp - 4]
+call print_string
+add esp, 4
+push var_red_func
+call print_string
+add esp, 4
+; load function name
+mov eax, dword [ebp + 20]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [eax + 4]
+call print_string
+add esp, 4
+push nl 
+call print_string
+add esp, 4
+xor eax, eax
+leave
+ret
 
-
+; bool add_func(Tree_node* node, hash_map* type_table, hash_map* var_table, hash_map* func_table)
 add_func:
 push ebp
 mov ebp, esp 
-sub esp, 16
-mov dword [ebp - 4], 0  
-mov dword [ebp - 8], 0
-mov dword [ebp - 12], 0
-mov dword [ebp - 16], 0
+sub esp, 24
+mov dword [ebp - 4], 0      ; FuD pointer
+mov dword [ebp - 8], 0      ; new_funcna_lexeme pointer
+mov dword [ebp - 12], 0     ; r_type_lexeme pointer
+mov dword [ebp - 16], 0     ; TyDeco pointer
+mov dword [ebp - 20], 0     ; composite contruction entry pointer
+mov dword [ebp - 24], 0     ; Decorator pointer
+mov eax, dword [ebp + 8]
+mov dword [ebp - 4], eax    ; load FuD
+lea eax, dword [eax + 12]   ; load children
+mov eax, dword [eax + 12]   ; load FuncNa
+mov eax, dword [eax + 4]    ; load token
+mov eax, dword [eax + 4]    ; load lexeme
+mov dword [ebp - 8], eax    ; load new_funcna_lexeme
+push dword [ebp + 16]
+push dword [ebp + 12]
+push dword [ebp - 4]
+call construct_func
+add esp, 12
+cmp eax, 0      ; semantic error in func declaration
+je .error_exit
+push eax
+push dword [ebp - 8]
+push dword [ebp + 20]
+call hash_map_put
+add esp, 12
+mov eax, 1
 leave
 ret 
+.error_exit:
+xor eax, eax 
+leave
+ret
+
+; entry* construct_func(Tree_node* node, hash_map* type_table, hash_map* var_table, hash_map* func_table)
+construct_func:
+push ebp
+mov ebp, esp
+sub esp, 32
+mov dword [ebp - 4], 0      ; FuD pointer
+mov dword [ebp - 8], 0      ; new_name_lexeme pointer
+mov dword [ebp - 12], 0     ; type_lexeme pointer
+mov dword [ebp - 16], 0     ; TyDeco pointer
+mov dword [ebp - 20], 0     ; composite contruction entry pointer
+mov dword [ebp - 24], 0     ; Decorator pointer
+mov dword [ebp - 28], 0     ; function var_table pointer
+mov dword [ebp - 32], 0     ; VaDS pointer
+mov eax, dword [ebp + 8]
+mov dword [ebp - 4], eax    ; save FuD
+lea eax, dword [eax + 12]   ; get FuD children
+mov eax, dword [eax + 12]    ; load Na
+mov eax, dword [eax + 4]    ; get token
+mov eax, dword [eax + 4]    ; load lexeme
+mov dword [ebp - 8], eax    ; save new_funcNa_lexeme
+; detect type complexity
+; get type_lexeme
+mov eax, dword [ebp - 4]    ; load FuD
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 4]    ; load Ty
+mov eax, dword [eax + 12]   ; load child
+mov eax, dword [eax + 4]    ; load token
+mov eax, dword [eax + 4]    ; load lexeme
+mov dword [ebp - 12], eax   ; save type_lexeme
+push dword [ebp - 12]
+push dword [ebp + 12]
+call hash_map_get
+add esp, 8
+mov dword [ebp - 20], eax   ; save type entry
+; start chain construction of pointer/array types
+mov eax, dword [ebp - 4]    ; load FuD
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 8]    ; load TyDeco 
+mov dword [ebp - 16], eax   ; save TyDeco
+cmp dword [eax + 8], 0      ; check if any decorators are present
+je .simple_type
+; go over the pointer chains
+mov eax, dword [eax + 12]   ; load PDeco
+mov dword [ebp - 24], eax   ; save PDeco
+.pointer_loop:
+mov eax, dword [ebp - 24]
+cmp dword [eax + 8], 0
+je .check_arrays
+push dword [ebp - 20]
+push pointer
+call get_composite_p_entry
+add esp, 8
+mov dword [ebp - 20], eax
+mov eax, dword [ebp - 24]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov dword [ebp - 24], eax
+jmp .pointer_loop
+.check_arrays:
+mov eax, dword [ebp - 16]   ; load TyDeco
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]    ; load ArrDeco
+mov dword [ebp - 24], eax   ; save ArrDeco
+.array_loop:
+mov eax, dword [ebp - 24]
+cmp dword [eax + 8], 0
+je .composite_type
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 4]    ; load Num node
+mov eax, dword [eax + 4]    ; load token
+mov eax, dword [eax + 4]    ; load lexeme
+push eax 
+push dword [ebp - 20]
+push array
+call get_composite_arr_entry
+add esp, 12
+mov dword [ebp - 20], eax
+mov eax, dword [ebp - 24]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 12]
+mov dword [ebp - 24], eax
+jmp .array_loop
+.composite_type:
+mov eax, dword [ebp - 8]
+mov edx, dword [ebp - 20]
+mov dword [edx], eax 
+mov eax, edx
+jmp .func_entry
+; declare simple type
+.simple_type:
+push dword [ebp - 12]
+push dword [ebp + 12]
+call hash_map_get
+add esp, 8
+push eax 
+push dword [ebp - 8]
+call get_simple_entry
+add esp, 8
+.func_entry:
+; eax has r_type entry at this point
+mov dword [ebp - 20], eax
+push 16 
+push 4
+call get_hash_map
+add esp, 8
+mov dword [ebp - 28], eax
+; loop through params
+mov eax, dword [ebp - 4]    ; load FuD
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 20]   ; load PaDS
+mov dword [ebp - 16], eax   ; save PaDS
+; load first param
+mov eax, dword [ebp - 16]   ; load PaDS
+cmp dword [eax + 8], 0      ; no params
+je .end_param_loop
+lea eax, dword [eax + 12]
+mov edx, dword [eax]
+mov eax, dword [eax + 4]    ; load RPaDS
+mov dword [ebp - 16], eax   ; save RPaDS
+push dword [ebp - 4]
+push dword [ebp - 28]
+push dword [ebp + 12]
+push edx
+call add_var
+add esp, 16
+cmp eax, 0  ; error while adding param
+je .error_exit
+; load rest
+.param_loop:
+mov eax, dword [ebp - 16]   ; load RPaDS
+cmp dword [eax + 8], 0
+je .end_param_loop
+lea eax, dword [eax + 12]
+mov edx, dword [eax + 8]    ; load RPaD
+mov dword [ebp - 16], edx   ; save next RPaDS
+mov eax, dword [eax + 4]    ; load PaD
+push dword [ebp - 4]
+push dword [ebp - 28]
+push dword [ebp + 12]
+push eax 
+call add_var
+add esp, 16
+cmp eax, 0  ; error while adding param
+je .error_exit
+jmp .param_loop
+.end_param_loop:
+; add declared variables
+mov eax, dword [ebp - 4]    ; load FuD
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 32]   ; load VaDS
+mov dword [ebp - 32], eax   ; save VaDS
+.declared_vars_loop:
+mov eax, dword [ebp - 32]    ; load VaDS
+cmp dword [eax + 8], 0      ; check if any gm variables declared
+je .no_vars_declared
+lea eax, dword [eax + 12]   ; load children baddr
+mov edx, dword [eax + 4]    ; load next VaDS
+mov dword [ebp - 32], edx    ; save next VaDS
+mov eax, dword [eax]        ; load VaD
+push dword [ebp - 4]
+push dword [ebp - 28]
+push dword [ebp + 12]
+push eax 
+call add_var
+add esp, 16
+cmp eax, 0  ; error while adding var
+je .error_exit
+jmp .declared_vars_loop
+.no_vars_declared:
+; get func body
+mov eax, dword [ebp - 4]    ; load FuD
+lea eax, dword [eax + 12]   ; load children baddr
+push dword [eax + 36]       ; load body
+push dword [ebp - 28]       ; load func var_table
+push dword [ebp - 20]       ; load r_type
+push dword [ebp - 8]        ; load FuncNa
+call get_func_entry
+add esp, 16
+leave
+ret
+
+.error_exit:
+xor eax, eax 
+leave
+ret
 
 ; bool detect_main(Tree_node* FuDS)
-detect_main:
-push ebp 
-mov ebp, esp 
-sub esp, 12
-mov dword [ebp - 4], 0      ; zero out the flag
-mov dword [ebp - 8], 0      ; FuDS pointer
-.check:
-mov eax, dword [ebp + 8]
-cmp dword [eax + 8], 0
-je .exit
-lea eax, dword [eax + 12]
-mov edx, dword [eax + 4]
-mov dword [ebp + 8], edx
-mov eax, dword [eax]
-mov dword [ebp - 8], eax   ; save FuD
-lea eax, dword [eax + 12]
-mov eax, dword [eax + 4]
-mov eax, dword [eax + 12]
-mov eax, dword [eax + 4]
-mov eax, dword [eax]
-cmp eax, INTEGER
-jne .check
-mov eax, dword [ebp - 8]
-lea eax, dword [eax + 12]
-mov eax, dword [eax + 8]
-mov eax, dword [eax + 4]
-mov eax, dword [eax + 4]
-push eax 
-push main_k
-call string_equals
-add esp, 8
-cmp eax, 0
-je .check 
+; detect_main:
+; push ebp 
+; mov ebp, esp 
+; sub esp, 12
+; mov dword [ebp - 4], 0      ; zero out the flag
+; mov dword [ebp - 8], 0      ; FuDS pointer
+; .check:
+; mov eax, dword [ebp + 8]
+; cmp dword [eax + 8], 0
+; je .exit
+; lea eax, dword [eax + 12]
+; mov edx, dword [eax + 4]
+; mov dword [ebp + 8], edx
+; mov eax, dword [eax]
+; mov dword [ebp - 8], eax   ; save FuD
+; lea eax, dword [eax + 12]
+; mov eax, dword [eax + 4]
+; mov eax, dword [eax + 12]
+; mov eax, dword [eax + 4]
+; mov eax, dword [eax]
+; cmp eax, INTEGER
+; jne .check
+; mov eax, dword [ebp - 8]
+; lea eax, dword [eax + 12]
+; mov eax, dword [eax + 8]
+; mov eax, dword [eax + 4]
+; mov eax, dword [eax + 4]
+; push eax 
+; push main_k
+; call string_equals
+; add esp, 8
+; cmp eax, 0
+; je .check 
 
-.exit:
-leave
-ret 
+; .exit:
+; leave
+; ret 
 
 var_red: db "ERROR: semantic error, variable '", 0
-var_red_gm: db "' redeclared in global memory.", 10, 0
+var_red_gm: db "' redeclared in global memory", 10, 0
 var_red_func: db "' redeclared in function ", 0
+param_red: db "ERROR: semantic error, parameter '", 0
+func_red: db "ERROR: semantic error, function '", 0
+func_red_end: db "' redeclared.", 10, 0
 func_main_missing: db "ERROR: semantic error, parameterless function main not declared"
 is_primitive: db "primitive type ref", 0
 is_simple: db "simple type registered", 0
@@ -387,3 +802,5 @@ is_nonprimitive: db "nonprimitive type ref", 0
 main_k: db "main", 0
 pointer: db "*", 0
 array: db "[]", 0
+
+; TODO: add boolean checks to add_* functions for error detection
