@@ -68,7 +68,7 @@ mov byte [ebp - 4], al ; peek = get_char()
 ; if (peek is eof) end lexing
 cmp byte [ebp - 4], EOF 
 jne .no_end
-push null
+push EOF_k
 push EOF 
 call get_token
 add esp, 8 
