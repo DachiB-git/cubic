@@ -2,7 +2,7 @@
 [org 0x7C00]
 %define drive_read_buffer 0x0000_7E00
 %define boot_drive_ptr 0x0000_0500
-%define source_code_start 0x0000_C200
+%define source_code_start 0x0000_C800
 %define frame_buffer_ptr 0x000B_8000
 
 ; boot sector and BPB declarations
@@ -14,7 +14,7 @@ BPB_SecPerClus:     db 1
 BPB_RsvdSecCnt:     dw 1
 BPB_NumFATs:        db 2
 BPB_RootEntCnt:     dw 512          ; TODO: figure out a better number 
-BPB_TotSec16:       dw 2 * 80 * 16  ; 2 sides, 80 tracks per side, 16 sectors per track
+BPB_TotSec16:       dw 2 * 80 * 18  ; 2 sides, 80 tracks per side, 18 sectors per track
 BPB_Media:          db 0xF0         ; 1.44MB floppy
 BPB_FATSz16:        dw 9            ; 9 sectors for each FAT (2880 sectors, 341 full entries in each sector)
 BPB_SecPerTrk:      dw 16
@@ -49,12 +49,39 @@ int 0x10
 ; ref : dragon pg 138 3.2 input buffering
 read_sectors:
 mov ah, 0x02    ; function
-mov al, 40      ; sector_count
+mov al, 17      ; sector_count
 mov ch, 0x00    ; low eight bits of cylinder
-mov cl, 0x02    ; sector after vbr and second boot, upper two bits cylinder hdd only
+mov cl, 0x02    ; sector after boot, upper two bits cylinder hdd only
 mov dh, 0x00    ; head
 mov dl, 0x00
 mov bx, drive_read_buffer
+int 0x13
+
+mov ah, 0x02    ; function
+mov al, 18      ; sector_count
+mov ch, 0x00    ; low eight bits of cylinder
+mov cl, 0x01    ; first sector, upper two bits cylinder hdd only
+mov dh, 0x01    ; head
+mov dl, 0x00
+mov bx, 0x7C00 + 18 * 512
+int 0x13
+
+mov ah, 0x02    ; function
+mov al, 2       ; sector_count
+mov ch, 0x01    ; low eight bits of cylinder
+mov cl, 0x01    ; first sector, upper two bits cylinder hdd only
+mov dh, 0x00    ; head
+mov dl, 0x00
+mov bx, source_code_start - 1024
+int 0x13
+
+mov ah, 0x02    ; function
+mov al, 2       ; sector_count
+mov ch, 0x01    ; low eight bits of cylinder
+mov cl, 0x03    ; third sector
+mov dh, 0x00    ; head
+mov dl, 0x00
+mov bx, source_code_start
 int 0x13
 
 ; activate a20 gate
@@ -166,72 +193,6 @@ call compiler_compile
 ; call lspci
 xor eax, eax
 leave
-ret
-
-
-lspci: 
-push ebp
-mov ebp, esp 
-sub esp, 16
-mov dword [ebp - 4], 0  ; bus number
-; bus loop
-.bus_loop:
-cmp dword [ebp - 4], 256
-je .bus_loop_end
-mov dword [ebp - 8], 0  ; device number
-.device_loop:
-cmp dword [ebp - 8], 32
-je .device_loop_end
-mov dword [ebp - 12], 0 ; function number
-.function_loop:
-cmp dword [ebp - 12], 8
-je .function_loop_end
-push dword [ebp - 12]
-push dword [ebp - 8]
-push dword [ebp - 4]
-call pci_config_read
-add esp, 12
-cmp eax, 0xffff_ffff
-je .function_loop_end
-mov dword [ebp - 16], eax
-; print vendor id
-mov eax, dword [ebp - 16]
-and eax, 0xffff
-push 16
-push itoa_buffer
-push eax 
-call itoa
-add esp, 12
-push itoa_buffer
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-; print device id
-mov eax, dword [ebp - 16]
-shr eax, 16
-push 16 
-push itoa_buffer
-push eax 
-call itoa 
-add esp, 12 
-push itoa_buffer
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-inc dword [ebp - 12]
-jmp .function_loop
-.function_loop_end:
-inc dword [ebp - 8]
-jmp .device_loop
-.device_loop_end:
-inc dword [ebp - 4]
-jmp .bus_loop
-.bus_loop_end:
-leave 
 ret
 
 ; returns a pointer to allocated mem block of size in bytes
@@ -425,5 +386,4 @@ string_b: db "hello world", 0
 true: db "strings are equal", 0
 false: db "strings are not equal", 0
 nl: db 10, 0
-null: db "NULL", 0
-times 17920 - ($ - $$) db 0
+times 19456 - ($ - $$) db 0
