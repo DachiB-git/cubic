@@ -495,7 +495,7 @@ ret
 
 ; Doesn't currently implement a load factor setter since the optimum for separate chaining falls close to one
 ; TODO: any official source on this would be nice
-; STRUCTURE: hash_map <(sizeof(value_size)*)[capacity] bucket, uint capacity, uint item_count> 
+; STRUCTURE: hash_map <(sizeof(value_size)*)[capacity] bucket, uint capacity, uint item_count, uint bucket_size_b> 
 ; hash_map* get_hash_map(uint value_size, uint initial_capacity)
 get_hash_map:
 push ebp
@@ -519,7 +519,7 @@ mov dword [ebp - 8], eax
 jmp .size_calc
 .end_size_calc:
 ; get empty hash_map*
-push 12
+push 16
 call heap_alloc
 add esp, 4
 mov dword [ebp - 12], eax 
@@ -538,6 +538,8 @@ mov dword [eax], edx
 mov edx, dword [ebp - 4]
 mov dword [eax + 4], edx 
 mov dword [eax + 8], 0
+mov edx, dword [ebp - 8]
+mov dword [eax + 12], edx
 leave
 ret 
 
@@ -546,7 +548,7 @@ ret
 hash_map_put:
 push ebp 
 mov ebp, esp 
-sub esp, 16                 ; reserve 16 bytes (4 variables)
+sub esp, 24
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 4]
 mov dword [ebp - 4], eax    ; load hash_map capacity
@@ -554,6 +556,8 @@ mov dword [ebp - 4], eax    ; load hash_map capacity
 ; [ebp - 8] = index 
 ; [ebp - 12] = list_node_ptr
 ; [ebp - 16] = table_entry_ptr 
+; [ebp - 20] = bucket pointer
+; [ebp - 24] = counter
 ; calculate index
 push dword [ebp + 12]
 call fnv32_1                ; get hash
@@ -617,6 +621,59 @@ mov edx, dword [ebp + 8]
 mov edx, dword [edx]
 add edx, dword [ebp - 8]
 mov dword [edx], eax 
+; update hash_map item count
+mov eax, dword [ebp + 8]
+inc dword [eax + 8]
+; check for resize
+mov edx, dword [ebp - 4]
+cmp edx, dword [eax + 8]
+jne .exit 
+.resize:
+mov eax, dword [ebp + 8]
+mov eax, dword [eax]
+mov dword [ebp - 20], eax   ; save old bucket baddr
+mov eax, dword [ebp + 8]
+shl dword [eax + 12], 1     ; double byte count
+push dword [eax + 12]
+call heap_alloc
+add esp, 4
+mov edx, dword [ebp + 8]
+mov dword [edx], eax
+mov eax, dword [ebp + 8]
+shl dword [eax + 4], 1      ; double capacity
+mov dword [eax + 8], 0      ; item_count = 0
+; rehash old items into the new bucket
+mov eax, dword [ebp - 4]
+mov dword [ebp - 24], eax   ; load counter
+.rehash_loop:
+mov eax, dword [ebp - 20]
+cmp dword [ebp - 24], 0
+je .exit
+dec dword [ebp - 24] 
+cmp dword [eax], 0
+je .get_next_addr
+mov eax, dword [eax]
+mov dword [ebp - 12], eax   ; load list_node
+.rehash_list_loop:
+mov eax, dword [ebp - 12]
+cmp eax, 0
+je .get_next_addr
+mov eax, dword [eax]        ; load entry
+push dword [eax + 4]
+push dword [eax]
+push dword [ebp + 8]
+call hash_map_put
+add esp, 12
+mov eax, dword [ebp - 12]
+mov eax, dword [eax + 4]
+mov dword [ebp - 12], eax
+jmp .rehash_list_loop
+.get_next_addr:
+mov eax, dword [ebp - 20]
+add eax, 4
+mov dword [ebp - 20], eax
+jmp .rehash_loop
+.exit:
 leave
 ret 
 
@@ -748,7 +805,7 @@ and edx, dword [ebp + 12]   ; hash & mask
 xor eax, edx                ; (hash >> bit_count) ^ (hash & mask)
 leave
 ret
-.exit
+.exit:
 mov eax, dword [ebp + 12]
 leave
 ret 
