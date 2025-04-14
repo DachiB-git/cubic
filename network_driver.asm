@@ -37,3 +37,68 @@ mov dx, CONFIG_DATA
 in eax, dx
 leave
 ret 
+
+lspci: 
+push ebp
+mov ebp, esp 
+sub esp, 16
+mov dword [ebp - 4], 0  ; bus number
+; bus loop
+.bus_loop:
+cmp dword [ebp - 4], 256
+je .bus_loop_end
+mov dword [ebp - 8], 0  ; device number
+.device_loop:
+cmp dword [ebp - 8], 32
+je .device_loop_end
+mov dword [ebp - 12], 0 ; function number
+.function_loop:
+cmp dword [ebp - 12], 8
+je .function_loop_end
+push dword [ebp - 12]
+push dword [ebp - 8]
+push dword [ebp - 4]
+call pci_config_read
+add esp, 12
+cmp eax, 0xffff_ffff
+je .function_loop_end
+mov dword [ebp - 16], eax
+; print vendor id
+mov eax, dword [ebp - 16]
+and eax, 0xffff
+push 16
+push itoa_buffer
+push eax 
+call itoa
+add esp, 12
+push itoa_buffer
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+; print device id
+mov eax, dword [ebp - 16]
+shr eax, 16
+push 16 
+push itoa_buffer
+push eax 
+call itoa 
+add esp, 12 
+push itoa_buffer
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+inc dword [ebp - 12]
+jmp .function_loop
+.function_loop_end:
+inc dword [ebp - 8]
+jmp .device_loop
+.device_loop_end:
+inc dword [ebp - 4]
+jmp .bus_loop
+.bus_loop_end:
+leave 
+ret
