@@ -1,6 +1,8 @@
 TypeEntry {
     key: string
-    complexity: Enum(PRIMITIVE, SIMPLE, POINTER, ARRAY)
+    complexity: Enum(PRIMITIVE, SIMPLE, POINTER, ARRAY, STRUCT)
+    type: TypeEntry
+    size: UINT
 }
 
 PrimitiveTypeEntry(TypeEntry) {
@@ -12,18 +14,21 @@ SimpleTypeEntry(TypeEntry) {
 }
 
 CompositeTypeEntry(TypeEntry) {
-    type: TypeEntry
+    child_type: TypeEntry // same as type for other entries
+}
+ 
+StructTypeEntry(TypeEntry) {
+    children_table: VarTable
 }
 
-// not present in the table, only a local construct to a specific entry, located on the heap
+
+// not present in the table, only a local construct to a specific entry,
 // used for pointer/array type chaining
-// prim_type** type_name -> {type_name, * } -> {null, *} -> prim_type 
+// prim_type** type_name -> {type_name, * } -> {'*', *} -> prim_type 
 AnonymousTypeEntry(CompositeTypeEntry) {
     key: 
 }
-// only if type == ARRAY
-ArrayTypeEntry(CompositeTypeEntry):
-    size: UINT 
+
 typedef int int_t;
 typedef int_t* int_p;
 typedef int* int_p;     // will rewrite the key 'int_p' to a new entry
@@ -46,22 +51,20 @@ int_t -> TypeEntry {
 
 int_p -> TypeEntry {
     key: "int_p"
-    complexity: COMPOSITE
-    type: POINTER
+    complexity: POINTER
     child_type: TypeTable.get("int_t")
+    size: 4
 }
 
 int_sp -> TypeEntry {
     key: "int_sp"
-    complexity: COMPOSITE
-    type: POINTER
+    complexity: POINTER
     child_type: INT
 }
 
 pair -> TypeEntry {
     key: "pair"
     complexity: COMPOSITE
-    type: ARRAY
     size: 2
     child_type: TypeTable.get("int")
 }

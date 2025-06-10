@@ -187,10 +187,8 @@ mov eax, dword [ebp - jump_table_size - 4]
 push dword [eax]
 call tag_to_str
 add esp, 4
-push eax 
-call print_string
-add esp, 4
-push nl 
+push eax
+push nl
 call print_string
 add esp, 4
 mov eax, dword [ebp - jump_table_size - 4]
@@ -3305,6 +3303,8 @@ call jump_table_init
 add esp, 16
 leave
 ret 
+
+
 ; panic-mode syntax error resolution
 ; searches for a ; , }, of EOF
 ; void error(char* error_msg)
@@ -3601,8 +3601,6 @@ ret
 
 
 
-; %define EPSILON -1
-; %define EOF 0
 TYNAME_k: db 'TyNa', 0
 FUNCNAME_k: db 'FuncNa', 0
 prog_k: db 'prog', 0 

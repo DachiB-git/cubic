@@ -2,7 +2,7 @@
 [org 0x7C00]
 %define drive_read_buffer 0x0000_7E00
 %define boot_drive_ptr 0x0000_0500
-%define source_code_start 0x0000_C800
+%define source_code_start 0x0000_E800
 %define frame_buffer_ptr 0x000B_8000
 
 ; boot sector and BPB declarations
@@ -47,13 +47,15 @@ int 0x10
 ; load the source code for the compiler
 ; todo : upgrade to a double buffer system with current_lexeme and forward pointers
 ; ref : dragon pg 138 3.2 input buffering
+; bx - base address of read buffer
+; al - sector_count
 read_sectors:
 mov ah, 0x02    ; function
 mov al, 17      ; sector_count
 mov ch, 0x00    ; low eight bits of cylinder
 mov cl, 0x02    ; sector after boot, upper two bits cylinder hdd only
 mov dh, 0x00    ; head
-mov dl, 0x00
+mov dl, byte [boot_drive_ptr]
 mov bx, drive_read_buffer
 int 0x13
 
@@ -62,26 +64,26 @@ mov al, 18      ; sector_count
 mov ch, 0x00    ; low eight bits of cylinder
 mov cl, 0x01    ; first sector, upper two bits cylinder hdd only
 mov dh, 0x01    ; head
-mov dl, 0x00
+mov dl, byte [boot_drive_ptr]
 mov bx, 0x7C00 + 18 * 512
 int 0x13
 
 mov ah, 0x02    ; function
-mov al, 2       ; sector_count
+mov al, 18       ; sector_count
 mov ch, 0x01    ; low eight bits of cylinder
 mov cl, 0x01    ; first sector, upper two bits cylinder hdd only
 mov dh, 0x00    ; head
-mov dl, 0x00
-mov bx, source_code_start - 1024
+mov dl, byte [boot_drive_ptr]
+mov bx, 0x7C00 + 36 * 512
 int 0x13
 
 mov ah, 0x02    ; function
 mov al, 2       ; sector_count
 mov ch, 0x01    ; low eight bits of cylinder
-mov cl, 0x03    ; third sector
-mov dh, 0x00    ; head
-mov dl, 0x00
-mov bx, source_code_start
+mov cl, 0x01    ; third sector
+mov dh, 0x01    ; head
+mov dl, byte [boot_drive_ptr]
+mov bx, 0x7C00 + 54 * 512
 int 0x13
 
 ; activate a20 gate
@@ -373,7 +375,6 @@ ret
 
 
 
-
 %include "compiler.asm"
 %include "network_driver.asm"
 exit_success: db "Process terminated with exit code: 0x", 0
@@ -386,4 +387,4 @@ string_b: db "hello world", 0
 true: db "strings are equal", 0
 false: db "strings are not equal", 0
 nl: db 10, 0
-times 19456 - ($ - $$) db 0
+times 27648 - ($ - $$) db 0

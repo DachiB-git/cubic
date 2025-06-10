@@ -399,6 +399,8 @@ pop esi
 leave
 ret
 
+
+; bool string_equals(char* a, char* b)
 ; check if two given strings are equal 
 ; for a = a1, a2, a3 and b = b1, b2, b3
 ; return true if a1 = b1, a2 = b2, a3 = b3

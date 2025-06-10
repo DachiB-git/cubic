@@ -1,51 +1,8 @@
-%define EPSILON 0 
-%define EOF -1
-%define NAME  256
-%define NUM 257
-%define INTEGER 258
-%define UINTEGER 259
-%define BOOL 260
-%define CHAR 261
-%define TYPEDEF 262
-%define LT 263
-%define LE 264
-%define GT 265
-%define GE 266
-%define EQ 267
-%define NE 268
-%define AND_OP 269
-%define OR_OP 270
-%define IF 271
-%define ELSE 272
-%define WHILE 273
-%define DO 274
-%define STRUCT 275
-%define RETURN 276
-%define FUNC 277
-
-
-%define prog 0 
-%define TyDS 1
-%define VaDS 2 
-%define FuDS 3
-%define TyD 4 
-%define TE 5
-%define Ty 6
-%define TEDeco 7
-%define VaD 8
-%define FuD 9
-
-
-; prog -> TyDS VaDS FuDS 
-; 0 -> 1 2 3 
-; 1 -> 
-
-
-Na -> LeDiS 
+Na -> LeDiS
 TyNa -> Na promotion
 FuncNa -> Na promotion
-Num -> DiS 
-------------------------------------------
+Num -> DiS
+------------------------------------------------
 prog -> TyDS VaDS FuDS                          // first(prog) = {typedef, int, uint, bool, char, TyNa, func}
                                                 // follow(prog) = {$}
 TyDS -> TyD TyDS | eps                          // first(TyDS) = {typedef, eps}

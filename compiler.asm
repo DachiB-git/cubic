@@ -75,6 +75,13 @@
 ; CONSTANTS
 %define destination_addr 0x4000_0000 
 
+; INCLUDES
+%include "io.asm"
+%include "utils.asm"
+%include "lexer.asm"
+%include "parser.asm"
+%include "analyzer.asm"
+
 ; VARIABLES
 ; buffer_ptr - [ebp - 4]
 ; pointer - [ebp - 8]
@@ -229,27 +236,30 @@ call symbol_table_init
 add esp, 12
 
 ; init type table with primitives
+push 4
 push INTEGER
 push integer_k
 push dword [ebp - 56]
 call type_table_init
-add esp, 12
+add esp, 16
+push 4
 push UINTEGER
 push uinteger_k
 push dword [ebp - 56]
 call type_table_init
-add esp, 12
+add esp, 16
+push 1
 push CHAR
 push char_k
 push dword [ebp - 56]
 call type_table_init
-add esp, 12
+add esp, 16
+push 1
 push BOOL
 push bool_k
 push dword [ebp - 56]
 call type_table_init
-add esp, 12
-
+add esp, 16
 
 lea eax, dword [ebp - 28]
 push eax
@@ -259,38 +269,88 @@ mov dword [ebp - 48], eax
 cmp dword [ebp - 48], 0
 je .exit
 
-push dword [ebp - 64]   ; func_table
-push dword [ebp - 60]   ; var_table
-push dword [ebp - 56]   ; type_table
-push dword [ebp - 48]   ; parse_tree root
+push dword [ebp - 64]       ; func_table
+push dword [ebp - 60]       ; var_table
+push dword [ebp - 56]       ; type_table
+push dword [ebp - 48]       ; parse_tree root
 call analyzer
 add esp, 16
-cmp eax, 0              ; semantic error detected
+cmp eax, 0                  ; semantic error detected
 je .exit
-mov eax, dword [ebp - 64]
-mov eax, dword [eax]        ; load first pointer
-mov dword [ebp - 68], eax 
-mov eax, dword [ebp - 64]
-mov eax, dword [eax + 4]
-mov dword [ebp - 72], eax   ; load capacity
-.func_loop:
-cmp dword [ebp - 72], 0
-je .end_func_loop
-dec dword [ebp - 72]
+push struct_test
+push dword [ebp - 56]
+call hash_map_get
+add esp, 8
+mov dword [ebp - 68], eax
+cmp dword [ebp - 68], 0
+je .exit
 mov eax, dword [ebp - 68]
-cmp dword [eax], 0
-jne .print_list
-add dword [ebp - 68], 4
-jmp .func_loop
-.print_list:
 push dword [eax]
-call print_linked_list
+call print_string
+add esp, 4
+push nl
+call print_string
+push 10
+push itoa_buffer
+mov eax, dword [ebp - 68]
+push dword [eax + 4]
+call itoa
+add esp, 12
+push itoa_buffer
+call print_string
 add esp, 4
 push nl 
 call print_string
 add esp, 4
-add dword [ebp - 68], 4
-jmp .func_loop
+mov eax, dword [ebp - 68]
+mov eax, dword [eax + 8]
+push struct_test_sll_next
+push eax 
+call hash_map_get
+add esp, 8
+mov dword [ebp - 72], eax
+push dword [eax]
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+mov eax, dword [ebp - 72]
+push 16
+push itoa_buffer
+push dword [eax + 4]
+call itoa
+add esp, 12
+push itoa_buffer
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+; mov eax, dword [ebp - 64]
+; mov eax, dword [eax]        ; load first pointer
+; mov dword [ebp - 68], eax 
+; mov eax, dword [ebp - 64]
+; mov eax, dword [eax + 4]
+; mov dword [ebp - 72], eax   ; load capacity
+; .func_loop:
+; cmp dword [ebp - 72], 0
+; je .end_func_loop
+; dec dword [ebp - 72]
+; mov eax, dword [ebp - 68]
+; cmp dword [eax], 0
+; jne .print_list
+; add dword [ebp - 68], 4
+; jmp .func_loop
+; .print_list:
+; push dword [eax]
+; call print_linked_list
+; add esp, 4
+; push nl 
+; call print_string
+; add esp, 4
+; add dword [ebp - 68], 4
+; jmp .func_loop
 .end_func_loop:
 .exit:
 leave 
@@ -314,10 +374,11 @@ leave
 ret 
 
 ; initializes the primitive into the type table
-; void type_table_init(hash_map* type_table, char* key, int type)
+; void type_table_init(hash_map* type_table, char* key, int type, uint size)
 type_table_init:
 push ebp
-mov ebp, esp 
+mov ebp, esp
+push dword [ebp + 20] 
 push dword [ebp + 16]
 push dword [ebp + 12]
 call get_primitive_entry
@@ -353,8 +414,8 @@ func_k: db "func", 0
 true_k: db "true", 0
 false_k: db "false", 0
 EOF_k: db "EOF", 0
-%include "io.asm"
-%include "utils.asm"
-%include "lexer.asm"
-%include "parser.asm"
-%include "analyzer.asm"
+int_t_k: db "int_t", 0
+int_arr_k: db "int_arr", 0
+struct_test: db "SLL", 0
+struct_test_sll_next: db "next", 0
+struct_test_sll_val: db "val", 0
