@@ -175,7 +175,31 @@ call reset_screen
 mov dword [heap_base_ptr], 0x3000_0000
 mov dword [heap_ptr], 0x3000_0000
 
+; mov eax, esp
+; push 16
+; push itoa_buffer
+; push eax
+; call itoa
+; add esp, 12
+; push itoa_buffer
+; call print_string
+; add esp, 4
+; push nl
+; call print_string
+; add esp, 4
+
 call main
+
+; mov eax, esp
+; push 16
+; push itoa_buffer
+; push eax
+; call itoa
+; add esp, 12
+; push itoa_buffer
+; call print_string
+; add esp, 4
+
 mov ebx, eax 
 push exit_success
 call print_string
@@ -185,7 +209,11 @@ push ebx
 call itoa
 push itoa_buffer
 call print_string
+
+
+
 jmp $
+
 
 main:
 push ebp

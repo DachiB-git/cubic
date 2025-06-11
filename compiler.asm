@@ -277,48 +277,14 @@ call analyzer
 add esp, 16
 cmp eax, 0                  ; semantic error detected
 je .exit
-push struct_test
-push dword [ebp - 56]
+push test_str
+push dword [ebp - 60]
 call hash_map_get
 add esp, 8
-mov dword [ebp - 68], eax
-cmp dword [ebp - 68], 0
-je .exit
-mov eax, dword [ebp - 68]
-push dword [eax]
-call print_string
-add esp, 4
-push nl
-call print_string
+mov eax, dword [eax + 4]
 push 10
 push itoa_buffer
-mov eax, dword [ebp - 68]
-push dword [eax + 4]
-call itoa
-add esp, 12
-push itoa_buffer
-call print_string
-add esp, 4
-push nl 
-call print_string
-add esp, 4
-mov eax, dword [ebp - 68]
-mov eax, dword [eax + 8]
-push struct_test_sll_next
-push eax 
-call hash_map_get
-add esp, 8
-mov dword [ebp - 72], eax
-push dword [eax]
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-mov eax, dword [ebp - 72]
-push 16
-push itoa_buffer
-push dword [eax + 4]
+push dword [eax + 12]
 call itoa
 add esp, 12
 push itoa_buffer
@@ -417,5 +383,4 @@ EOF_k: db "EOF", 0
 int_t_k: db "int_t", 0
 int_arr_k: db "int_arr", 0
 struct_test: db "SLL", 0
-struct_test_sll_next: db "next", 0
-struct_test_sll_val: db "val", 0
+test_str: db "my_struct", 0

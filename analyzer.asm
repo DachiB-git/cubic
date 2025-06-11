@@ -195,7 +195,7 @@ ret
 get_composite_arr_entry:
 push ebp
 mov ebp, esp 
-sub esp, 4
+sub esp, 8
 push 16 
 call heap_alloc
 add esp, 4
@@ -207,6 +207,12 @@ mov dword [eax + 4], ARRAY
 mov edx, dword [ebp + 12]
 mov dword [eax + 8], edx
 mov edx, dword [ebp + 16]
+mov eax, dword [ebp + 12]
+mov eax, dword [eax + 12]
+mul edx
+mov dword [ebp - 8], eax
+mov eax, dword [ebp - 4]
+mov edx, dword [ebp - 8]
 mov dword [eax + 12], edx
 leave
 ret 
@@ -361,7 +367,9 @@ ret
 construct_struct:
 push ebp 
 mov ebp, esp
-sub esp, 20         
+sub esp, 28
+mov dword [ebp - 24], 0     ; size counter
+mov dword [ebp - 28], 0     ; variable name pointer     
 push 16
 push 4
 call get_hash_map
@@ -380,6 +388,12 @@ push dword [ebp - 16]
 call get_composite_struct_entry
 add esp, 12
 mov dword [ebp - 20], eax   ; save struct_entry
+; load struct_entry into type_table for self referencing
+push dword [ebp - 20]
+push dword [ebp - 16]
+push dword [ebp + 12]
+call hash_map_put
+add esp, 12
 mov eax, dword [ebp + 8]    ; load TE
 lea eax, dword [eax + 12]   ; load children baddr
 mov eax, dword [eax + 12]   ; load VaDS
@@ -392,6 +406,11 @@ lea eax, dword [eax + 12]   ; load children baddr
 mov edx, dword [eax + 4]    ; load next VaDS
 mov dword [ebp - 4], edx    ; save next VaDS
 mov eax, dword [eax]        ; load VaD
+lea edx, dword [eax + 12]   ; load children baddr
+mov edx, dword [edx + 8]    ; load Na
+mov edx, dword [edx + 4]    ; load token
+mov edx, dword [edx + 4]    ; load lexeme
+mov dword [ebp - 28], edx
 push dword [ebp + 8]
 push dword [ebp - 12]
 push dword [ebp + 12]
@@ -400,9 +419,18 @@ call add_var
 add esp, 16
 cmp eax, 0  ; error while adding var
 je .error_exit
+push dword [ebp - 28]
+push dword [ebp - 12]
+call hash_map_get
+add esp, 8
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 12]
+add dword [ebp - 24], eax
 jmp .declared_vars_loop
 .no_vars_declared:
 mov eax, dword [ebp - 20]
+mov edx, dword [ebp - 24]
+mov dword [eax + 12], edx
 leave
 ret
 .error_exit:
