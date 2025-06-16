@@ -1,16 +1,9 @@
-                MEMORY MAP
-=====================================================
-0x00007E00 - 0x000085FF => 2 KiB second bootloader
-
-=====================================================
-
-
 struct StringBuilder {
     char c,
     StringBuilder* next;
 }
 
-StringBuilder* builder = new StringBuilder();
+StringBuilder* builder = get_string_builder();
 
 string_builder_append(builder, 'a')
 
@@ -23,7 +16,3 @@ string_builder_append(StringBuilder* builder, char c)
     }
     *node.next = new StringBuilder('a')
 }
-
-
-
-Lexus NX200 4x4 2.0 2015-2016 10k $

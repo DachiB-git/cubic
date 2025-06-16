@@ -97,7 +97,7 @@ get_var_entry:
 push ebp 
 mov ebp, esp 
 sub esp, 4
-push 8
+push 12
 call heap_alloc
 add esp, 4
 mov dword [ebp - 4], eax
@@ -106,6 +106,7 @@ mov edx, dword [ebp + 8]
 mov dword [eax], edx 
 mov edx, dword [ebp + 12]
 mov dword [eax + 4], edx
+mov dword [eax + 8], 0
 leave
 ret
 
@@ -222,7 +223,7 @@ get_composite_struct_entry:
 push ebp 
 mov ebp, esp 
 sub esp, 4
-push 16 
+push 20 
 call heap_alloc
 add esp, 4
 mov dword [ebp - 4], eax 
@@ -234,6 +235,7 @@ mov edx, dword [ebp + 12]
 mov dword [eax + 8], edx
 mov edx, dword [ebp + 16]
 mov dword [eax + 12], edx
+mov dword [eax + 16], 0
 leave
 ret
 
@@ -367,9 +369,13 @@ ret
 construct_struct:
 push ebp 
 mov ebp, esp
-sub esp, 28
-mov dword [ebp - 24], 0     ; size counter
+sub esp, 48
+mov dword [ebp - 24], 0     ; alignment_size
 mov dword [ebp - 28], 0     ; variable name pointer     
+mov dword [ebp - 32], 0     ; prev_size aka the alignment of the last variable
+mov dword [ebp - 36], 0     ; streak_size
+mov dword [ebp - 40], 0     ; total_size
+mov dword [ebp - 44], 0     ; variable_entry buffer
 push 16
 push 4
 call get_hash_map
@@ -423,14 +429,88 @@ push dword [ebp - 28]
 push dword [ebp - 12]
 call hash_map_get
 add esp, 8
-mov eax, dword [eax + 4]
-mov eax, dword [eax + 12]
-add dword [ebp - 24], eax
+push eax
+call get_var_alignment
+add esp, 4
+cmp eax, dword [ebp - 24]
+jl .declared_vars_loop
+mov dword [ebp - 24], eax
 jmp .declared_vars_loop
 .no_vars_declared:
+.alignment_routine:
+mov eax, dword [ebp + 8]    ; load TE
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 12]   ; load VaDS
+mov dword [ebp - 4], eax    ; save VaDS
+.alignment_loop:
+mov eax, dword [ebp - 4]    ; load VaDS
+cmp dword [eax + 8], 0
+je .tail_pad_check
+lea eax, dword [eax + 12]   ; load children baddr
+mov edx, dword [eax + 4]    ; load next VaDS
+mov dword [ebp - 4], edx
+mov eax, dword [eax]        ; load VaD
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 8]    ; load Na
+mov eax, dword [eax + 4]    ; load token
+mov eax, dword [eax + 4]    ; load lexeme
+push eax
+push dword [ebp - 12]
+call hash_map_get
+add esp, 8
+mov dword [ebp - 44], eax   ; save variable_entry
+push eax 
+call get_var_alignment
+add esp, 4
+cmp dword [ebp - 32], 0
+jne .else
+mov dword [ebp - 32], eax   ; save current alignment as prev_size
+mov eax, dword [ebp - 44]   ; load var_entry
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 12]   ; get size
+mov dword [ebp - 40], eax   ; total_size = cur_size
+mov dword [ebp - 36], eax   ; streak_size = cur_size
+jmp .alignment_loop
+.else:
+cmp eax, dword [ebp - 32]   ; align > prev_size
+jle .less
+mov dword [ebp - 32], eax   ; prev_size = align
+sub eax, dword [ebp - 36]   ; delta = align - streak_size
+add dword [ebp - 40], eax 
+add dword [ebp - 36], eax
+jmp .equal
+.less:
+cmp eax, dword [ebp - 32]   ; align < prev_size
+je .equal
+mov dword [ebp - 32], eax   ; prev_size = align
+mov dword [ebp - 36], 0     ; streak_size = 0
+.equal:
+mov eax, dword [ebp - 44]   ; load var_entry
+mov edx, dword [ebp - 40]   ; load total_size
+mov dword [eax + 8], edx    ; offset = total_size
+mov eax, dword [eax + 4]    ; load type
+mov eax, dword [eax + 12]   ; load cur_size
+add dword [ebp - 40], eax
+add dword [ebp - 36], eax
+jmp .alignment_loop
+.tail_pad_check:
+cmp dword [ebp - 24], 1
+je .no_tail_pad
+mov eax, dword [ebp - 40]
+and eax, 3
+cmp eax, 0
+je .no_tail_pad
+mov eax, dword [ebp - 40]
+add eax, 4
+shr eax, 2
+shl eax, 2
+mov dword [ebp - 40], eax
+.no_tail_pad:
 mov eax, dword [ebp - 20]
+mov edx, dword [ebp - 40]
+mov dword [eax + 12], edx 
 mov edx, dword [ebp - 24]
-mov dword [eax + 12], edx
+mov dword [eax + 16], edx
 leave
 ret
 .error_exit:
@@ -1094,6 +1174,29 @@ ret
 
 .error_exit:
 xor eax, eax 
+leave
+ret
+
+; uint get_var_alignment(var_entry* var)
+get_var_alignment:
+push ebp 
+mov ebp, esp
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 4]
+.get_alignment_loop:
+cmp dword [eax + 4], STRUCTURE
+jne .array
+; get struct alignment
+mov eax, dword [eax + 16]
+leave
+ret
+.array:
+cmp dword [eax + 4], ARRAY
+jne .other
+mov eax, dword [eax + 8]
+jmp .get_alignment_loop
+.other:
+mov eax, dword [eax + 12]
 leave
 ret
 

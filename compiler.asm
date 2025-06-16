@@ -277,47 +277,7 @@ call analyzer
 add esp, 16
 cmp eax, 0                  ; semantic error detected
 je .exit
-push test_str
-push dword [ebp - 60]
-call hash_map_get
-add esp, 8
-mov eax, dword [eax + 4]
-push 10
-push itoa_buffer
-push dword [eax + 12]
-call itoa
-add esp, 12
-push itoa_buffer
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-; mov eax, dword [ebp - 64]
-; mov eax, dword [eax]        ; load first pointer
-; mov dword [ebp - 68], eax 
-; mov eax, dword [ebp - 64]
-; mov eax, dword [eax + 4]
-; mov dword [ebp - 72], eax   ; load capacity
-; .func_loop:
-; cmp dword [ebp - 72], 0
-; je .end_func_loop
-; dec dword [ebp - 72]
-; mov eax, dword [ebp - 68]
-; cmp dword [eax], 0
-; jne .print_list
-; add dword [ebp - 68], 4
-; jmp .func_loop
-; .print_list:
-; push dword [eax]
-; call print_linked_list
-; add esp, 4
-; push nl 
-; call print_string
-; add esp, 4
-; add dword [ebp - 68], 4
-; jmp .func_loop
-.end_func_loop:
+
 .exit:
 leave 
 ret
@@ -383,4 +343,8 @@ EOF_k: db "EOF", 0
 int_t_k: db "int_t", 0
 int_arr_k: db "int_arr", 0
 struct_test: db "SLL", 0
-test_str: db "my_struct", 0
+test_str: db "str", 0
+test_str_a: db "a", 0
+test_str_b: db "b", 0
+test_str_c: db "c", 0
+test_str_d: db "d", 0

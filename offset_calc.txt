@@ -1,0 +1,64 @@
+def pretty_print(s):
+    print("{")
+    for k,v in s.items():
+        print(f" {k}: offset={v["offset"]} size={v["size"]} pad={v["pad"]}")
+    print("}")
+
+struct = {
+    "a": {
+        "offset" : 0,
+        "size": 8,
+        "pad": 0
+    },
+    "b": {
+        "offset" : 0,
+        "size": 1,
+        "pad": 0
+    }
+}
+max_size = 4
+streak_size = 0
+total_size = 0
+prev_size = 0
+
+for k,v in struct.items():
+    
+    if prev_size == 0:
+        total_size = v["size"]
+        streak_size = v["size"]
+        prev_size = v["size"]
+        prev_member = k
+    else:
+        if v["size"] > prev_size:
+            delta = v["size"] - streak_size
+            total_size += delta
+            streak_size += delta
+            struct[prev_member]["pad"] = delta
+        if v["size"] < prev_size:
+            streak_size = 0
+        v["offset"] = total_size
+        total_size += v["size"]
+        streak_size += v["size"]
+        prev_member = k
+        prev_size = v["size"]
+    # pretty_print(struct)
+    # print(f"{total_size} {streak_size}")
+if max_size > 1 and total_size % max_size != 0:
+    last_member = struct[list(struct)[-1]]
+    new_size = max_size
+    while new_size < total_size:
+        new_size += max_size
+    v["pad"] = new_size - total_size
+    total_size = new_size
+
+pretty_print(struct)
+print(f"total_size: {total_size}")
+
+
+mov dword [ebp - 24], 0     ; alignment_size
+mov dword [ebp - 28], 0     ; variable name pointer     
+mov dword [ebp - 32], 0     ; prev_size aka the alignment of the last variable
+mov dword [ebp - 36], 0     ; streak_size
+mov dword [ebp - 40], 0     ; total_size
+mov dword [ebp - 44], 0     ; variable_entry buffer
+mov dword [ebp - 48], 0     ; cur_size

@@ -185,8 +185,8 @@ ret
 left_caret: db '<', 0
 right_caret: db '>', 0
 
-; returns a string_builder_ptr into eax, initialized with optional preset values
-; builder* get_string_builder(char c)
+
+; builder* get_string_builder()
 get_string_builder:
 push ebp
 mov ebp, esp

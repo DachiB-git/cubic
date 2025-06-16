@@ -19,6 +19,7 @@ CompositeTypeEntry(TypeEntry) {
  
 StructTypeEntry(TypeEntry) {
     children_table: VarTable
+    alignment: UINT (currently 1 or 4)
 }
 
 
@@ -90,6 +91,7 @@ child_type: int
 VarEntry {
     key: string
     type: TypeEntry | AnonymousTypeEntry
+    offset: UINT
 }
 
 
