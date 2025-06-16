@@ -995,7 +995,7 @@ ret
 construct_func:
 push ebp
 mov ebp, esp
-sub esp, 32
+sub esp, 40
 mov dword [ebp - 4], 0      ; FuD pointer
 mov dword [ebp - 8], 0      ; new_name_lexeme pointer
 mov dword [ebp - 12], 0     ; type_lexeme pointer
@@ -1004,6 +1004,8 @@ mov dword [ebp - 20], 0     ; composite contruction entry pointer
 mov dword [ebp - 24], 0     ; Decorator pointer
 mov dword [ebp - 28], 0     ; function var_table pointer
 mov dword [ebp - 32], 0     ; VaDS pointer
+mov dword [ebp - 36], 1     ; array_ret flag
+mov dword [ebp - 40], 0     ; type_entry pointer
 mov eax, dword [ebp + 8]
 mov dword [ebp - 4], eax    ; save FuD
 lea eax, dword [eax + 12]   ; get FuD children
@@ -1039,6 +1041,7 @@ mov dword [ebp - 24], eax   ; save PDeco
 mov eax, dword [ebp - 24]
 cmp dword [eax + 8], 0
 je .check_arrays
+mov dword [ebp - 36], 0     ; reset array_ret flag
 push dword [ebp - 20]
 push pointer
 call get_composite_p_entry
@@ -1050,6 +1053,8 @@ mov eax, dword [eax + 4]
 mov dword [ebp - 24], eax
 jmp .pointer_loop
 .check_arrays:
+cmp dword [ebp - 36], 1     ; check array_ret flag
+je .error_array_ret
 mov eax, dword [ebp - 16]   ; load TyDeco
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]    ; load ArrDeco
@@ -1085,6 +1090,16 @@ push dword [ebp - 12]
 push dword [ebp + 12]
 call hash_map_get
 add esp, 8
+mov dword [ebp - 40], eax
+; check if array type in return
+.check_array_type_loop:
+cmp dword [eax + 4], ARRAY
+je .error_array_ret
+cmp dword [eax + 4], SIMPLE
+jne .no_array_ret
+mov eax, dword [eax + 8]
+jmp .check_array_type_loop
+.no_array_ret:
 push eax 
 push dword [ebp - 8]
 call get_simple_entry
@@ -1172,6 +1187,16 @@ add esp, 16
 leave
 ret
 
+.error_array_ret:
+push func_red
+call print_string
+add esp, 4
+push dword [ebp - 8]
+call print_string
+add esp, 4
+push func_arr_ret
+call print_string
+add esp, 4
 .error_exit:
 xor eax, eax 
 leave
@@ -1249,6 +1274,7 @@ single_quote_close: db "'", 10, 0
 param_red: db "ERROR: semantic error, parameter '", 0
 func_red: db "ERROR: semantic error, function '", 0
 func_red_end: db "' redeclared.", 10, 0
+func_arr_ret: db "' declared with an array type return value.", 10, 0
 func_main_missing: db "ERROR: semantic error, parameterless function main not declared"
 is_primitive: db "primitive type ref", 0
 is_simple: db "simple type registered", 0
