@@ -1,0 +1,45 @@
+typedef struct s_t
+{
+    int a;
+    int b;
+    int[2] c;
+};
+
+int add(s_t s) 
+{
+    return s.a + s.b;
+}
+
+int main()
+{
+    s_t s;
+    int res;
+    s.a = 10;
+    s.b = 5;
+    res = add(s);
+    return res;
+}
+
+
+main:
+push ebp
+mov ebp, esp 
+sub esp, 12
+mov dword [ebp - 8], 10
+mov dword [ebp - 4], 5
+push dword [ebp - 8]
+push dword [ebp - 4]
+call add
+add esp, 8
+mov dword [ebp - 12], eax
+mov eax, dword [ebp - 12]
+leave
+ret
+
+
+add:
+push ebp
+mov ebp, esp
+
+leave
+ret

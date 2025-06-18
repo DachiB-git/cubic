@@ -995,7 +995,7 @@ ret
 construct_func:
 push ebp
 mov ebp, esp
-sub esp, 40
+sub esp, 56
 mov dword [ebp - 4], 0      ; FuD pointer
 mov dword [ebp - 8], 0      ; new_name_lexeme pointer
 mov dword [ebp - 12], 0     ; type_lexeme pointer
@@ -1006,6 +1006,10 @@ mov dword [ebp - 28], 0     ; function var_table pointer
 mov dword [ebp - 32], 0     ; VaDS pointer
 mov dword [ebp - 36], 1     ; array_ret flag
 mov dword [ebp - 40], 0     ; type_entry pointer
+mov dword [ebp - 44], 1     ; struct_ret flag
+mov dword [ebp - 48], 0     ; offset counter
+mov dword [ebp - 52], 0     ; var lexeme pointer
+mov dword [ebp - 56], 0     ; var_entry pointer
 mov eax, dword [ebp + 8]
 mov dword [ebp - 4], eax    ; save FuD
 lea eax, dword [eax + 12]   ; get FuD children
@@ -1107,6 +1111,7 @@ add esp, 8
 .func_entry:
 ; eax has r_type entry at this point
 mov dword [ebp - 20], eax
+mov dword [ebp - 48], -8    ; init offset counter
 push 16 
 push 4
 call get_hash_map
@@ -1122,18 +1127,50 @@ mov eax, dword [ebp - 16]   ; load PaDS
 cmp dword [eax + 8], 0      ; no params
 je .end_param_loop
 lea eax, dword [eax + 12]
-mov edx, dword [eax]
-mov eax, dword [eax + 4]    ; load RPaDS
-mov dword [ebp - 16], eax   ; save RPaDS
+mov edx, dword [eax]        ; load PaD
+lea edx, dword [edx + 12]   ; load children baddr
+mov edx, dword [edx + 8]    ; load Na
+mov edx, dword [edx + 4]    ; load token
+mov edx, dword [edx + 4]    ; load lexeme
+mov dword [ebp - 52], edx   ; save var lexeme
+mov edx, dword [eax + 4]    ; load RPaDS
+mov dword [ebp - 16], edx   ; save RPaDS
+mov eax, dword [eax]        ; load PaD
 push dword [ebp - 4]
 push dword [ebp - 28]
 push dword [ebp + 12]
-push edx
+push eax
 call add_var
 add esp, 16
 cmp eax, 0  ; error while adding param
 je .error_exit
 ; load rest
+push dword [ebp - 52]
+push dword [ebp - 28]
+call hash_map_get
+add esp, 8
+mov dword [ebp - 56], eax
+mov edx, dword [ebp - 48]
+mov dword [eax + 8], edx
+mov eax, dword [eax + 4]
+.loop1:
+cmp dword [eax + 4], ARRAY
+jne .check1
+mov eax, dword [eax + 8]
+jmp .loop1
+.check1:
+cmp dword [eax + 4], SIMPLE
+jne .end_check1
+mov eax, dword [eax + 8]
+jmp .loop1
+.end_check1:
+mov eax, dword [eax + 12]
+cmp eax, 4
+jge .skip1
+mov eax, 4
+.skip1:
+sub dword [ebp - 48], eax
+mov eax, dword [ebp - 56]
 .param_loop:
 mov eax, dword [ebp - 16]   ; load RPaDS
 cmp dword [eax + 8], 0
@@ -1142,6 +1179,11 @@ lea eax, dword [eax + 12]
 mov edx, dword [eax + 8]    ; load RPaD
 mov dword [ebp - 16], edx   ; save next RPaDS
 mov eax, dword [eax + 4]    ; load PaD
+lea edx, dword [eax + 12]
+mov edx, dword [edx + 8]
+mov edx, dword [edx + 4]
+mov edx, dword [edx + 4]
+mov dword [ebp - 52], edx   ; save ver lexeme
 push dword [ebp - 4]
 push dword [ebp - 28]
 push dword [ebp + 12]
@@ -1150,21 +1192,53 @@ call add_var
 add esp, 16
 cmp eax, 0  ; error while adding param
 je .error_exit
+push dword [ebp - 52]
+push dword [ebp - 28]
+call hash_map_get
+add esp, 8
+mov dword [ebp - 56], eax
+mov edx, dword [ebp - 48]
+mov dword [eax + 8], edx
+mov eax, dword [eax + 4]
+.loop2:
+cmp dword [eax + 4], ARRAY
+jne .check2
+mov eax, dword [eax + 8]
+jmp .loop2
+.check2:
+cmp dword [eax + 4], SIMPLE
+jne .end_check2
+mov eax, dword [eax + 8]
+jmp .loop2
+.end_check2:
+mov eax, dword [eax + 12]
+cmp eax, 4
+jge .skip2
+mov eax, 4
+.skip2:
+sub dword [ebp - 48], eax
+mov eax, dword [ebp - 56]
 jmp .param_loop
 .end_param_loop:
 ; add declared variables
+mov dword [ebp - 48], 0     ; reset offset counter
 mov eax, dword [ebp - 4]    ; load FuD
 lea eax, dword [eax + 12]   ; load children baddr
 mov eax, dword [eax + 32]   ; load VaDS
 mov dword [ebp - 32], eax   ; save VaDS
 .declared_vars_loop:
-mov eax, dword [ebp - 32]    ; load VaDS
+mov eax, dword [ebp - 32]   ; load VaDS
 cmp dword [eax + 8], 0      ; check if any gm variables declared
 je .no_vars_declared
 lea eax, dword [eax + 12]   ; load children baddr
 mov edx, dword [eax + 4]    ; load next VaDS
-mov dword [ebp - 32], edx    ; save next VaDS
+mov dword [ebp - 32], edx   ; save next VaDS
 mov eax, dword [eax]        ; load VaD
+lea edx, dword [eax + 12]
+mov edx, dword [edx + 8]
+mov edx, dword [edx + 4]
+mov edx, dword [edx + 4]
+mov dword [ebp - 52], edx
 push dword [ebp - 4]
 push dword [ebp - 28]
 push dword [ebp + 12]
@@ -1173,6 +1247,39 @@ call add_var
 add esp, 16
 cmp eax, 0  ; error while adding var
 je .error_exit
+push dword [ebp - 52]
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+push dword [ebp - 52]
+push dword [ebp - 28]
+call hash_map_get
+add esp, 8
+mov dword [ebp - 56], eax
+mov eax, dword [eax + 4]
+.loop3:
+cmp dword [eax + 4], ARRAY
+jne .check3
+mov eax, dword [eax + 8]
+jmp .loop3
+.check3:
+cmp dword [eax + 4], SIMPLE
+jne .end_check3
+mov eax, dword [eax + 8]
+jmp .loop3
+.end_check3:
+mov eax, dword [eax + 12]
+cmp eax, 4
+jge .skip3
+mov eax, 4
+.skip3:
+add dword [ebp - 48], eax
+mov eax, dword [ebp - 56]
+mov edx, dword [ebp - 48]
+mov dword [eax + 8], edx
+mov eax, dword [ebp - 56]
 jmp .declared_vars_loop
 .no_vars_declared:
 ; get func body
