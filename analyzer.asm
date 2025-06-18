@@ -918,7 +918,7 @@ mov eax, dword [eax + 4]
 push dword [eax + 4]
 call print_string
 add esp, 4
-push nl 
+push single_quote_close 
 call print_string
 add esp, 4
 xor eax, eax
@@ -942,7 +942,7 @@ mov eax, dword [eax + 4]
 push dword [eax + 4]
 call print_string
 add esp, 4
-push nl 
+push single_quote_close 
 call print_string
 add esp, 4
 xor eax, eax
@@ -1248,12 +1248,6 @@ add esp, 16
 cmp eax, 0  ; error while adding var
 je .error_exit
 push dword [ebp - 52]
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-push dword [ebp - 52]
 push dword [ebp - 28]
 call hash_map_get
 add esp, 8
@@ -1377,7 +1371,7 @@ var_red: db "ERROR: semantic error, variable '", 0
 var_red_gm: db "' redeclared in global memory", 10, 0
 var_red_func: db "' redeclared in function '", 0
 var_red_struct: db "' redeclared in struct '", 0
-single_quote_close: db "'", 10, 0
+single_quote_close: db "'.", 10, 0
 param_red: db "ERROR: semantic error, parameter '", 0
 func_red: db "ERROR: semantic error, function '", 0
 func_red_end: db "' redeclared.", 10, 0
