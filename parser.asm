@@ -1347,7 +1347,7 @@ add esp, 16
 leave
 ret 
 
-; PaDArrDeco -> [] PaDArrDeco | eps               // first(PaDArrDeco) = {[, eps}
+; PaDArrDeco -> [] ArrDeco | eps               // first(PaDArrDeco) = {[, eps}
                                                 ; // follow(PaDArrDeco) = {Na}
 init_PaDArrDeco:
 push ebp
@@ -1362,7 +1362,7 @@ push 0x5D ; ]
 push dword [ebp - 4]
 call linked_list_append
 add esp, 8
-push PaDArrDeco
+push ArrDeco
 push dword [ebp - 4]
 call linked_list_append
 add esp, 8
