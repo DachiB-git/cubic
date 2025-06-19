@@ -1165,9 +1165,12 @@ mov eax, dword [eax + 8]
 jmp .loop1
 .end_check1:
 mov eax, dword [eax + 12]
-cmp eax, 4
-jge .skip1
-mov eax, 4
+mov edx, eax
+and edx, 3
+jz .skip1
+add eax, 4
+shr eax, 2
+shl eax, 2
 .skip1:
 sub dword [ebp - 48], eax
 mov eax, dword [ebp - 56]
@@ -1212,9 +1215,12 @@ mov eax, dword [eax + 8]
 jmp .loop2
 .end_check2:
 mov eax, dword [eax + 12]
-cmp eax, 4
-jge .skip2
-mov eax, 4
+mov edx, eax
+and edx, 3
+jz .skip2
+add eax, 4
+shr eax, 2
+shl eax, 2
 .skip2:
 sub dword [ebp - 48], eax
 mov eax, dword [ebp - 56]
@@ -1265,9 +1271,12 @@ mov eax, dword [eax + 8]
 jmp .loop3
 .end_check3:
 mov eax, dword [eax + 12]
-cmp eax, 4
-jge .skip3
-mov eax, 4
+mov edx, eax
+and edx, 3
+jz .skip3
+add eax, 4
+shr eax, 2
+shl eax, 2
 .skip3:
 add dword [ebp - 48], eax
 mov eax, dword [ebp - 56]
