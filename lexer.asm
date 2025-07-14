@@ -29,12 +29,13 @@
 ; func_detect - [ebp - 44]
 ; lexeme - [ebp - 48]
 ; token - [ebp - 52]
+; char* - [ebp - 56]
 ; LEXER
 ; token* lexer_get_token(lexer_state* state)
 lexer_get_token:
 push ebp 
 mov ebp, esp 
-sub esp, 52
+sub esp, 56
 ; init variables
 ; peek - [ebp - 4]
 ; numerical_value - [ebp - 8]
@@ -250,31 +251,37 @@ ret
 cmp byte [ebp - 4], 0x3C       ; '<'
 jne .check1
 mov eax, LE
+mov dword [ebp - 56], le_op
 jmp .check_equals
 .check1:
 cmp byte [ebp - 4], 0x3E       ; '>'
 jne .check2
 mov eax, GE
+mov dword [ebp - 56], ge_op
 jmp .check_equals
 .check2:
 cmp byte [ebp - 4], 0x3D       ; '='
 jne .check3
 mov eax, EQ
+mov dword [ebp - 56], eq_op
 jmp .check_equals
 .check3:
 cmp byte [ebp - 4], 0x21       ; '!'
 jne .check4
 mov eax, NE
+mov dword [ebp - 56], ne_op
 jmp .check_equals
 .check4:
 cmp byte [ebp - 4], 0x26       ; '&'
 jne .check5
 mov eax, AND_OP
+mov dword [ebp - 56], and_op
 jmp .check_twin
 .check5:
 cmp byte [ebp - 4], 0x7C       ; '|'
 jne .not_an_operator
 mov eax, OR_OP
+mov dword [ebp - 56], or_op
 jmp .check_twin
 .check_equals:
 mov dword [ebp - 12], eax 
@@ -286,7 +293,7 @@ cmp eax, 0x3D       ; '='
 jne .no_equals
 ; <=. >=, == 
 mov eax, dword [ebp - 12]
-push 0
+push dword [ebp - 56]
 push eax
 call get_token
 add esp, 8
@@ -297,7 +304,14 @@ push dword [ebp - 24]
 call retract
 add esp, 4
 mov eax, dword [ebp - 4]
-push 0 
+cmp eax, LT
+jne .gt
+mov edx, lt_op
+jmp .end_tag_check
+.gt:
+mov edx, gt_op
+.end_tag_check:
+push edx
 push eax 
 call get_token
 add esp, 8
@@ -313,7 +327,7 @@ mov ah, byte [ebp - 4]
 cmp al, ah 
 jne .not_a_twin
 mov eax, dword [ebp - 12]
-push 0
+push dword [ebp - 56]
 push eax
 call get_token
 add esp, 8
