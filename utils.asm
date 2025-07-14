@@ -370,7 +370,6 @@ itoa_chars: db "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrs
 %define fnv_prime 0x0100_0193
 %define fnv_offset_basis 0x811c_9dc5
 
-; move key pointer into esi
 ; the input string must be null terminated
 ; returns a hashed value of the provided string in EAX
 ; int fnv32_1(char * str)
