@@ -348,3 +348,14 @@ test_str_a: db "a", 0
 test_str_b: db "b", 0
 test_str_c: db "c", 0
 test_str_d: db "d", 0
+equals: db "=", 0
+lt_op: db "<", 0
+le_op: db "<=", 0
+gt_op: db ">", 0
+ge_op: db ">=", 0
+eq_op: db "==", 0
+ne_op: db "!=", 0
+or_op: db "||", 0
+and_op: db "&&", 0
+left_parenthesis: db "(", 0
+right_parenthesis: db ")", 0
