@@ -62,7 +62,8 @@ push EOF
 push prog 
 
 .parse_loop:
-; cmp dword [ebp - jump_table_size - 12], 100
+
+; cmp dword [ebp - jump_table_size - 12], 40
 ; jl .skip 
 ; lea eax, dword [esp]
 ; push eax 
@@ -70,6 +71,7 @@ push prog
 ; add esp, 4
 ; .skip:
 ; inc dword [ebp - jump_table_size - 12]
+
 mov eax, dword [esp]
 mov dword [ebp - jump_table_size - 8], eax      ; cache stack top symbol
 cmp dword [ebp - jump_table_size - 8], EOF      ; check if EOF 
@@ -181,6 +183,16 @@ mov edx, dword [ebp - jump_table_size - 24]
 mov dword [eax], edx 
 jmp .parse_loop
 .error:
+; lea eax, dword [ebp - jump_table_size - 32 - word_map_size]
+; push eax 
+; mov eax, dword [ebp - jump_table_size - 20]
+; lea eax, dword [eax + 12]
+; mov eax, dword [eax + 8]
+; mov eax, dword [eax + 12]
+; push eax
+; call print_tree
+; add esp, 8
+
 lea eax, dword [ebp - jump_table_size - 32 - word_map_size]
 push eax
 mov eax, dword [ebp - jump_table_size - 4]
@@ -218,6 +230,24 @@ xor eax, eax
 leave
 ret
 .end_parsing:
+
+; lea eax, dword [ebp - jump_table_size - 32 - word_map_size]
+; push eax 
+; mov eax, dword [ebp - jump_table_size - 20]
+; lea eax, dword [eax + 12]
+; mov eax, dword [eax + 8]
+; mov eax, dword [eax + 12]
+; lea eax, dword [eax + 12]
+; mov eax, dword [eax + 36]
+; mov eax, dword [eax + 12]
+; mov eax, dword [eax + 12]
+; lea eax, dword [eax + 12]
+; mov eax, dword [eax + 8]
+; push eax
+; call print_tree
+; add esp, 8
+
+
 mov eax, dword [ebp - jump_table_size - 20]
 leave
 ret
@@ -1852,7 +1882,7 @@ leave
 ret 
 
 ; Rid -> idSel Rid | eps                          // first(Rid) = {., [, eps}                       
-                                                ; // follow(Rid) =  {=, *, /, +, -, ), >, >=, <, <=, ==, !=, ||, ], , , ;, )}
+                                                ; // follow(Rid) =  {=, *, /, +, -, ), >, >=, <, <=, ==, !=, &&, ||, ], , , ;, )}
 init_Rid:
 push ebp
 mov ebp, esp 
@@ -1878,7 +1908,7 @@ push Rid
 push dword [ebp + 8]
 call jump_table_init
 add esp, 16
-; // follow(Rid) =  {=, *, /, +, -, >, >=, <, <=, ==, !=, ||, ], , , ;, )}
+; // follow(Rid) =  {=, *, /, +, -, >, >=, <, <=, ==, !=, &&, ||, ], , , ;, )}
 push EPSILON
 push 0x3D ; =
 push Rid
@@ -1911,7 +1941,7 @@ call jump_table_init
 add esp, 16
 ; >, >=, <, <=, ==, !=, ||, ], , , ;, )
 push EPSILON
-push 0x3E ; >
+push GT ; >
 push Rid
 push dword [ebp + 8]
 call jump_table_init
@@ -1923,7 +1953,7 @@ push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x3C ; <
+push LT ; <
 push Rid
 push dword [ebp + 8]
 call jump_table_init
@@ -1947,6 +1977,12 @@ push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 ; ||, ], , , ;, )
+push EPSILON
+push AND_OP
+push Rid
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
 push EPSILON
 push OR_OP ; ||
 push Rid
@@ -1980,7 +2016,7 @@ add esp, 16
 leave 
 ret
 
-; idSel -> .Na | [JointE]                         // first(idSel) = {., [} 
+; idSel -> .Na | [GenE]                         // first(idSel) = {., [} 
                                                 ; // follow(idSel) = {Na}
 init_idSel:
 push ebp
@@ -2096,7 +2132,7 @@ leave
 ret 
 
 ; RE -> + T RE | - T RE | eps                     // first(RE) = {+, -, eps}
-                                                ; // follow(RE) = {), >, >=, <, <=, ==, !=, ||, ], , , ;, )}
+                                                ; // follow(RE) = {), >, >=, <, <=, ==, !=, &&, ||, ], , , ;, )}
 init_RE:
 push ebp 
 mov ebp, esp 
@@ -2147,7 +2183,7 @@ push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x3E ; >
+push GT ; >
 push RE 
 push dword [ebp + 8]
 call jump_table_init
@@ -2159,7 +2195,7 @@ push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x3C ; <
+push LT ; <
 push RE 
 push dword [ebp + 8]
 call jump_table_init
@@ -2179,6 +2215,12 @@ call jump_table_init
 add esp, 16
 push EPSILON
 push NE ; !=
+push RE 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push AND_OP ; &&
 push RE 
 push dword [ebp + 8]
 call jump_table_init
@@ -2290,7 +2332,7 @@ leave
 ret 
 
 ; RT -> * F RT | / F RT | eps                     // first(RT) = {*, /, eps}
-                                                ; // follow(RT) = {+, -, ), >, >=, <, <=, ==, !=, ||, ], , , ;, )}
+                                                ; // follow(RT) = {+, -, ), >, >=, <, <=, ==, !=, &&, ||, ], , , ;, )}
 init_RT:
 push ebp
 mov ebp, esp 
@@ -2353,7 +2395,7 @@ push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x3E ; >
+push GT ; >
 push RT 
 push dword [ebp + 8]
 call jump_table_init
@@ -2365,7 +2407,7 @@ push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x3C ; <
+push LT ; <
 push RT 
 push dword [ebp + 8]
 call jump_table_init
@@ -2385,6 +2427,12 @@ call jump_table_init
 add esp, 16
 push EPSILON
 push NE ; !=
+push RT 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push AND_OP ; &&
 push RT 
 push dword [ebp + 8]
 call jump_table_init
@@ -2555,7 +2603,7 @@ leave
 ret 
 
 ; JointE -> RelE Union                            // first(JointE) = {Na, -, !, *, &, (, Num, true, false}
-                                                ; // follow(JointE) = {], , , ;, )}
+                                                ; // follow(JointE) = {], , , ;, ), ||}
 init_JointE:
 push ebp 
 mov ebp, esp 
@@ -2700,7 +2748,7 @@ leave
 ret 
 
 ; RRelE -> RelOp E RRelE | eps                    // first(RRelE) = {>, >=, <, <=, ==, !=}
-                                                ; // follow(RRelE) = {||, ], , , ;, )}
+                                                ; // follow(RRelE) = {&&, ||, ], , , ;, )}
 init_RRelE:
 push ebp
 mov ebp, esp 
@@ -2716,9 +2764,10 @@ call linked_list_append
 add esp, 8
 push RRelE
 push dword [ebp - 4]
+call linked_list_append
 add esp, 8
 push dword [ebp - 4]
-push 0x3E ; > 
+push GT ; > 
 push RRelE
 push dword [ebp + 8]
 call jump_table_init
@@ -2730,7 +2779,7 @@ push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 push dword [ebp - 4]
-push 0x3C ; < 
+push LT ; < 
 push RRelE
 push dword [ebp + 8]
 call jump_table_init
@@ -2753,7 +2802,13 @@ push RRelE
 push dword [ebp + 8]
 call jump_table_init
 add esp, 16
-; // follow(RRelE) = {||, ], , , ;, )}
+; // follow(RRelE) = {&&, ||, ], , , ;, )}
+push EPSILON
+push AND_OP
+push RRelE
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
 push EPSILON
 push OR_OP
 push RRelE
@@ -2794,12 +2849,12 @@ push ebp
 mov ebp, esp 
 sub esp, 4
 push 0
-push 0x3E ; >
+push GT ; >
 call get_linked_list
 add esp, 8
 mov dword [ebp - 4], eax 
 push dword [ebp - 4]
-push 0x3E ; > 
+push GT ; > 
 push RelOp 
 push dword [ebp + 8]
 call jump_table_init
@@ -2816,12 +2871,12 @@ push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 push 0
-push 0x3C ; <
+push LT ; <
 call get_linked_list
 add esp, 8
 mov dword [ebp - 4], eax 
 push dword [ebp - 4]
-push 0x3C ; <
+push LT ; <
 push RelOp 
 push dword [ebp + 8]
 call jump_table_init
@@ -2862,14 +2917,14 @@ add esp, 16
 leave 
 ret 
 
-; Union -> || UnionT Union | eps                  // first(Union) = {||, eps}
+; Union -> Intersect UnionT                       // first(Union) = {&&, ||, eps}
                                                 ; // follow(Union) = {], , , ;, )}
 init_Union:
 push ebp 
 mov ebp, esp 
 sub esp, 4
 push 0
-push OR_OP
+push Intersect
 call get_linked_list
 add esp, 8
 mov dword [ebp - 4], eax
@@ -2877,17 +2932,19 @@ push UnionT
 push dword [ebp - 4]
 call linked_list_append
 add esp, 8
-push Union
 push dword [ebp - 4]
-call linked_list_append
-add esp, 8
+push AND_OP
+push Union
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
 push dword [ebp - 4]
 push OR_OP
 push Union
 push dword [ebp + 8]
 call jump_table_init
 add esp, 16
-; // follow(Union) = {], , , ;, )}
+; // follow(Union) = {], , , ;, ), ||}
 push EPSILON
 push 0x5D ; ]
 push Union
@@ -2915,79 +2972,63 @@ add esp, 16
 leave 
 ret
 
-; UnionT -> RelE Intersect                        // first(UnionT) = {Na, -, !, *, &, (, Num, true, false}
-                                                ; // follow(UnionT) = {||}
+; UnionT -> || RelE Intersect UnionT | eps        // first(UnionT) = {||, eps}
+;                                                 // follow(UnionT) = {], , , ;, )}
 init_UnionT:
 push ebp 
 mov ebp, esp 
 sub esp, 4
 push 0
-push RelE 
+push OR_OP 
 call get_linked_list
 add esp, 8
 mov dword [ebp - 4], eax 
+push RelE
+push dword [ebp - 4]
+call linked_list_append
+add esp, 8
 push Intersect
 push dword [ebp - 4]
 call linked_list_append
 add esp, 8
+push UnionT
 push dword [ebp - 4]
-push NAME
+call linked_list_append
+add esp, 8
+push dword [ebp - 4]
+push OR_OP
 push UnionT 
 push dword [ebp + 8]
 call jump_table_init
 add esp, 16
-push dword [ebp - 4]
-push 0x2D ; -
-push UnionT 
+push EPSILON
+push 0x5D ; ]
+push UnionT
 push dword [ebp + 8]
 call jump_table_init
 add esp, 16
-push dword [ebp - 4]
-push 0x21 ; !
-push UnionT 
+push EPSILON
+push 0x2C ; ,
+push UnionT
 push dword [ebp + 8]
 call jump_table_init
 add esp, 16
-push dword [ebp - 4]
-push 0x2A ; *
-push UnionT 
+push EPSILON
+push 0x3B ;
+push UnionT
 push dword [ebp + 8]
 call jump_table_init
 add esp, 16
-push dword [ebp - 4]
-push 0x26 ; &
-push UnionT 
-push dword [ebp + 8]
-call jump_table_init
-add esp, 16
-push dword [ebp - 4]
-push 0x28 ; (
-push UnionT 
-push dword [ebp + 8]
-call jump_table_init
-add esp, 16
-push dword [ebp - 4]
-push NUM
-push UnionT 
-push dword [ebp + 8]
-call jump_table_init
-add esp, 16
-push dword [ebp - 4]
-push TRUE 
-push UnionT 
-push dword [ebp + 8]
-call jump_table_init
-add esp, 16
-push dword [ebp - 4]
-push FALSE
-push UnionT 
+push EPSILON
+push 0x29 ; )
+push UnionT
 push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 leave 
 ret 
-; Intersect -> && RelE Intersect | eps            // first(Intersect) = {&&, eps}
-                                                ; // follow(Intersect) = {||}
+; Intersect -> && RelE Intersect | eps                    // first(Intersect) = {&&, eps}
+;                                                 // follow(Intersect) = {], , , ;, ), ||}
 init_Intersect:
 push ebp 
 mov ebp, esp 
@@ -3001,7 +3042,7 @@ push RelE
 push dword [ebp - 4]
 call linked_list_append
 add esp, 8
-push Intersect
+push Intersect 
 push dword [ebp - 4]
 call linked_list_append
 add esp, 8
@@ -3012,7 +3053,31 @@ push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push OR_OP
+push 0x5D ; ]
+push Intersect
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x2C ; ,
+push Intersect
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x3B ;
+push Intersect
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x29 ; )
+push Intersect
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push OR_OP ; ||
 push Intersect
 push dword [ebp + 8]
 call jump_table_init
@@ -3413,14 +3478,14 @@ leave
 ret 
 
 ; Tree_Node get_node(int tag, int child_count)
-; STRUCTURE : Tree_Node <int tag, token* token, int child_count, Tree_Node* children>
+; STRUCTURE : Tree_Node <int tag, token* token, int child_count, Tree_Node* children, void* inh, void* val>
 get_node:
 push ebp 
 mov ebp, esp 
 sub esp, 4
 mov eax, dword [ebp + 12]
 shl eax, 2
-add eax, 12
+add eax, 20
 push eax 
 call heap_alloc
 add esp, 4
@@ -3436,6 +3501,10 @@ lea eax, dword [eax + 12]
 push eax 
 call array_sanitize
 add esp, 8
+mov eax, dword [ebp - 4]
+mov edx, dword [ebp + 12]
+mov dword [eax + 12 + edx * 4 + 4], 0    ; zero out inh 
+mov dword [eax + 12 + edx * 4 + 8], 0    ; zero out val
 mov eax, dword [ebp - 4]
 leave
 ret 
