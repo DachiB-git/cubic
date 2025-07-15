@@ -303,15 +303,18 @@ ret
 push dword [ebp - 24]
 call retract
 add esp, 4
-mov eax, dword [ebp - 4]
-cmp eax, LT
-jne .gt
-mov edx, lt_op
+cmp byte [ebp - 4], 0x3C ; <
+jne .check_gt
+mov dword [ebp - 56], lt_op
+mov eax, LT
 jmp .end_tag_check
-.gt:
-mov edx, gt_op
+.check_gt:
+cmp byte [ebp - 4], 0x3E ; >
+jne .not_an_operator
+mov dword [ebp - 56], gt_op
+mov eax, GT
 .end_tag_check:
-push edx
+push dword [ebp - 56]
 push eax 
 call get_token
 add esp, 8
