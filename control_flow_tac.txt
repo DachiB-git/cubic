@@ -1,0 +1,18 @@
+if (x + 1 == 4)
+{
+    print_string("hello world");
+}
+else
+{
+    print_string("dog");
+}
+
+
+t1 = x + 1
+t2 = t1 == 4
+if t2 goto L1
+goto L2
+L1: print_string("hello world");
+    goto L3
+L2: print_string("dog");
+L3:

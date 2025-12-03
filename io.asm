@@ -18,10 +18,13 @@ ret
 
 ; peek at the next character, without incrementing the pointer
 peek_char:
+push ebp
+mov ebp, esp
 push ebx 
 add ebx, [ecx]
 mov al, byte [ebx]
 pop ebx
+leave
 ret
 
 ; decrement buffer pointer in ecx

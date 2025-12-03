@@ -1,7 +1,7 @@
 Na -> LeDiS
 TyNa -> Na promotion
 FuncNa -> Na promotion
-Num -> DiS
+Num -> DiS | - DiS
 ------------------------------------------------
 prog -> TyDS VaDS FuDS                          // first(prog) = {typedef, int, uint, bool, char, TyNa, func}
                                                 // follow(prog) = {$}
@@ -58,39 +58,50 @@ Arg -> GenE                                     // first(Arg) = {FuncNa, Na, *, 
                                                 // follow(Arg) = {, , )}
 ArgS -> Arg RArgS | eps                         // first(ArgS) = {FuncNa, Na, *, &, -, !, (, Num, true, false, eps}
                                                 // follow(ArgS) = {)}
-RArgS -> , Arg RArgs | eps                      // first(RArgS) = {, , eps}
+RArgS -> , Arg RArgS | eps                      // first(RArgS) = {, , eps}
                                                 // follow(RArgS) = {)}
 id -> Na Rid                                    // first(id) = {Na}
-                                                // follow(id) = {=, *, /, +, -, ), >, >=, <, <=, ==, !=, ||, ], , , ;, ), ]}
+                                                // follow(id) = {=, *, /, +, -, ), >, >=, <, <=, ==, !=, &&, ||, ], , , ;, ), ]}
 Rid -> idSel Rid | eps                          // first(Rid) = {., [, eps}                       
-                                                // follow(Rid) =  {=, *, /, +, -, ), >, >=, <, <=, ==, !=, ||, ], , , ;, ), ]}
+                                                // follow(Rid) =  {=, *, /, +, -, ), >, >=, <, <=, ==, !=, &&, ||, ], , , ;, ), ]}
 idSel -> .Na | [GenE]                           // first(idSel) = {., [} 
                                                 // follow(idSel) = {Na}
 E -> T RE                                       // first(E) = {id, -, !, *, &, (, Num, true, false}
-                                                // follow(E) = {), >, >=, <, <=, ==, !=, ||, ], , , ;, )}
+                                                // follow(E) = {), >, >=, <, <=, ==, !=, &&, ||, ], , , ;, )}
 RE -> + T RE | - T RE | eps                     // first(RE) = {+, -, eps}
-                                                // follow(RE) = {), >, >=, <, <=, ==, !=, ||, ], , , ;, )}
+                                                // follow(RE) = {), >, >=, <, <=, ==, !=, &&, ||, ], , , ;, )}
 T -> F RT                                       // first(T) = {id, -, !, *, &, (, Num, true, false}
-                                                // follow(T) = {+, -, ), >, >=, <, <=, ==, !=, ||, ], , , ;, )}
+                                                // follow(T) = {+, -, ), >, >=, <, <=, ==, !=, &&, ||, ], , , ;, )}
 RT -> * F RT | / F RT | eps                     // first(RT) = {*, /, eps}
-                                                // follow(RT) = {+, -, ), >, >=, <, <=, ==, !=, ||, ], , , ;, )}
+                                                // follow(RT) = {+, -, ), >, >=, <, <=, ==, !=, &&, ||, ], , , ;, )}
 F -> id | -F | !F | *F | &F | ( E ) | Num       // first(F) = {id, -, !, *, &, (, Num, true, false}
 | true | false  
-                                                // follow(F) = {*, /, +, -, ), >, >=, <, <=, ==, !=, ||, ], , , ;, )}
+                                                // follow(F) = {*, /, +, -, ), >, >=, <, <=, ==, !=, &&, ||, ], , , ;, )}
 JointE -> RelE Union                            // first(JointE) = {id, -, !, *, &, (, Num, true, false}
                                                 // follow(JointE) = {], , , ;, )}
 RelE -> E RRelE                                 // first(RelE) = {id, -, !, *, &, (, Num, true, false}
-                                                // follow(RelE) = {||, ], , , ;, )}
+                                                // follow(RelE) = {&&, ||, ], , , ;, )}
 RRelE -> RelOp E RRelE | eps                    // first(RRelE) = {>, >=, <, <=, ==, !=}
-                                                // follow(RRelE) = {||, ], , , ;, )}
+                                                // follow(RRelE) = {&&, ||, ], , , ;, )}
 RelOp -> > | >= | < | <= | == | !=              // first(RelOp) = {>, >=, <, <=, ==, !=}
 
-Union -> || UnionT Union | eps                  // first(Union) = {||, eps}
-                                                // follow(Union) = {], , , ;, )}
-UnionT -> RelE Intersect                        // first(UnionT) = {id, -, !, *, &, (, Num, true, false}
-                                                // follow(UnionT) = {||}
-Intersect -> && RelE Intersect | eps            // first(Intersect) = {&&, eps}
-                                                // follow(Intersect) = {||}
+; Union -> || UnionT Union | eps                  // first(Union) = {||, eps}
+;                                                 // follow(Union) = {], , , ;, ), ||}
+; UnionT -> RelE Intersect                        // first(UnionT) = {id, -, !, *, &, (, Num, true, false}
+;                                                 // follow(UnionT) = {||}
+; Intersect -> && RelE Intersect | eps            // first(Intersect) = {&&, eps}
+;                                                 // follow(Intersect) = {||}
+
+E -> T RE
+RE -> + T RE
+T -> F RT
+
+JointE -> RelE Union
+Union -> Intersect UnionT
+UnionT -> || RelE Intersect UnionT | eps
+Intersect -> && RelE Intersect | eps
+
+
 | TODO |
 add CC 
 add rSt -> return CC ;

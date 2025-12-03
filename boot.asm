@@ -218,9 +218,60 @@ jmp $
 main:
 push ebp
 mov ebp, esp
-; TODO: change parse tree structure and update printing method
+sub esp, 16
 call compiler_compile
 ; call lspci
+; mov eax, 0
+; cpuid
+; mov dword [ebp - 4], ecx
+; mov dword [ebp - 8], edx
+; mov dword [ebp - 12], ebx
+; mov dword [ebp - 16], eax
+; lea eax, dword [ebp - 12]
+; push eax
+; call print_string
+; add esp, 4
+; push nl
+; call print_string
+; add esp, 4
+; mov eax, 0x80000000
+; cpuid
+; push 16
+; push itoa_buffer
+; push eax
+; call itoa
+; add esp, 12
+; call print_string
+; add esp, 4
+; push nl
+; call print_string
+; add esp, 4
+; push 3
+; call sleep
+; add esp, 4
+; ; counter loop
+; mov dword [ebp - 4], 0  ; reset counter
+; mov dword [ebp - 8], 0  ; reset timer
+; .counter_loop:
+; mov dword [ebp - 8], eax
+; push 10
+; push itoa_buffer
+; push dword [ebp - 4]
+; call itoa
+; add esp, 12
+; push itoa_buffer
+; call print_string
+; add esp, 4
+; push space
+; call print_string
+; add esp, 4
+; push 1      ; sleep for 1 second
+; call sleep
+; add esp, 4
+; ; time has elapsed
+; inc dword [ebp - 4]; increment the counter
+; jmp .counter_loop
+; leave
 xor eax, eax
 leave
 ret
@@ -401,6 +452,38 @@ add eax, edx    ; buffer_addr = buffer_addr + offset
 leave
 ret
 
+get_time:
+push ebp
+mov ebp, esp
+sub esp, 4
+mfence
+lfence
+rdtsc   ; returns lo in eax
+lfence
+; vm running at cpu base freq 2.3 GHz
+mov dword [ebp - 4], 0x88D45D6D
+div dword [ebp - 4]
+; returns time in seconds since last reset
+leave
+ret
+
+; pauses the execution of the programme for the specified number of seconds
+; TODO: increase accuracy to milliseconds
+; void sleep(uint seconds)
+sleep:
+push ebp
+mov ebp, esp
+sub esp, 4
+call get_time
+mov dword [ebp - 4], eax    ; save new time
+.timer_loop:
+call get_time
+mov edx, dword [ebp - 4]
+sub eax, edx
+cmp eax, dword [ebp + 8]    ; check if specified interval ghas passed
+jl .timer_loop
+leave
+ret
 
 
 %include "compiler.asm"

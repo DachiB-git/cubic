@@ -495,7 +495,7 @@ ret
 ; otherwise the returned value is a pointer to a linked list of all cohashed items on the index
 
 ; Doesn't currently implement a load factor setter since the optimum for separate chaining falls close to one
-; TODO: any official source on this would be nice
+; (any official source on this would be nice)
 ; STRUCTURE: hash_map <(sizeof(value_size)*)[capacity] bucket, uint capacity, uint item_count, uint bucket_size_b> 
 ; hash_map* get_hash_map(uint value_size, uint initial_capacity)
 get_hash_map:

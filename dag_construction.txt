@@ -1,0 +1,76 @@
+typedef struct LinkedList
+{   
+    int val;
+    LinkedList* next;
+};
+
+LinkedList list;
+LinkedList list2;
+list2.val = 5;
+list.val = 10;
+list.next = &list2;
+id = GenE;
+
+Na Rid
+
+Na idSel Rid
+
+Na .Na Rid
+
+
+DOT_OP Na Na
+
+SEL_DOT_OP list val 
+check if list.type == 'struct' and list.vars.include('val')
+if true: continue
+else: throw error("unkown field name 'val' in struct 'list' of type 'LinkedList'.")
+
+
+E -> T RE
+RE -> + T RE | - T RE | eps
+T -> F RT
+RT -> * F RT | / F RT | eps
+F -> id | -F | !F | *F | &F | ( E ) | Num | true | false
+
+val - synthesized
+inh - inherited
+---------------
+E -> T RE
+E.val = RE.val
+RE.inh = T.val
+---------------
+RE -> + T RE1 | - T RE1 | eps
++ | -
+RE1.inh = RE.inh + T.val | RE.inh - T.val
+RE.val = RE1.val
+eps 
+RE.val = RE.inh
+---------------
+T -> F RT
+T.val = RT.val
+RT.inh = F.val
+---------------
+RT -> * F RT1 | / F RT1 | eps
+* | /
+RT1.inh = RT.inh * F.val | RT.inh / F.val
+RT.val = RT1.val
+eps 
+RT.val = RT.inh
+---------------
+F -> id | -F | !F | *F | &F | ( E ) | Num | true | false
+F.val = id.val | Num.val | true | false
+F.val = - F.val | ! F.val | * F.val | & F.val | E.val
+
+
+x = x + x;
+
+id.val = Na.val
+
+
+t12 
+
+
+
+F.val = char*
+T.val = &F.val
+E.val = &T.val

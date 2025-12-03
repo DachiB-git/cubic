@@ -995,7 +995,7 @@ ret
 construct_func:
 push ebp
 mov ebp, esp
-sub esp, 56
+sub esp, 72
 mov dword [ebp - 4], 0      ; FuD pointer
 mov dword [ebp - 8], 0      ; new_name_lexeme pointer
 mov dword [ebp - 12], 0     ; type_lexeme pointer
@@ -1010,6 +1010,10 @@ mov dword [ebp - 44], 1     ; struct_ret flag
 mov dword [ebp - 48], 0     ; offset counter
 mov dword [ebp - 52], 0     ; var lexeme pointer
 mov dword [ebp - 56], 0     ; var_entry pointer
+mov dword [ebp - 60], 0     ; body pointer
+mov dword [ebp - 64], 0     ; StS pointer
+mov dword [ebp - 68], 0     ; St pointer
+mov dword [ebp - 72], 0     ; temp_var counter
 mov eax, dword [ebp + 8]
 mov dword [ebp - 4], eax    ; save FuD
 lea eax, dword [eax + 12]   ; get FuD children
@@ -1285,6 +1289,32 @@ mov dword [eax + 8], edx
 mov eax, dword [ebp - 56]
 jmp .declared_vars_loop
 .no_vars_declared:
+; static type checking and transformation to three address code of func body
+mov eax, dword [ebp - 4]    ; load FuD
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 36]   ; load body
+mov dword [ebp - 60], eax   ; save body
+mov eax, dword [eax + 12]   ; load StS
+mov dword [ebp - 64], eax   ; save StS
+.statements_loop:
+mov eax, dword [ebp - 64]
+cmp dword [eax + 8], 0
+je .end_statements_loop
+lea edx, dword [eax + 12]
+mov edx, dword [edx + 4]    ; load StS
+mov dword [ebp - 64], edx   ; save next StS
+mov eax, dword [eax + 12]   ; load St
+mov dword [ebp - 68], eax   ; save St
+mov eax, dword [ebp - 68]   ; load St
+lea edx, dword [ebp - 72]
+push edx
+push eax
+call visit_node
+add esp, 8
+mov dword [ebp - 72], 0     ; zero out the counter
+jmp .statements_loop
+.end_statements_loop:
+
 ; get func body
 mov eax, dword [ebp - 4]    ; load FuD
 lea eax, dword [eax + 12]   ; load children baddr
@@ -1338,7 +1368,7 @@ ret
 ; bool detect_main(Tree_node* FuDS)
 ; detect_main:
 ; push ebp 
-; mov ebp, esp 
+; mov ebp, esp   
 ; sub esp, 12
 ; mov dword [ebp - 4], 0      ; zero out the flag
 ; mov dword [ebp - 8], 0      ; FuDS pointer
@@ -1374,6 +1404,1107 @@ ret
 ; leave
 ; ret 
 
+; void visit_node(Tree_Node* node, uint* temp_counter, char* temp_label)
+visit_node:
+push ebp
+mov ebp, esp 
+sub esp, 8
+mov dword [ebp - 4], 0      ; address pointer for either inh or val
+mov dword [ebp - 8], 0      ; char* buffer
+mov eax, dword [ebp + 8]    ; load node
+cmp dword [eax], St
+je .translate_statement
+cmp dword [eax], GenE
+je .GenE
+cmp dword [eax], JointE
+je .JointE
+cmp dword [eax], Union
+je .Union
+cmp dword [eax], UnionT
+je .UnionT
+cmp dword [eax], Intersect
+je .Intersect
+cmp dword [eax], RelE
+je .RelE
+cmp dword [eax], RRelE
+je .RRelE
+cmp dword [eax], ID
+je .id
+cmp dword [eax], Rid
+je .Rid
+cmp dword [eax], idSel
+je .idSel
+cmp dword [eax], E          
+je .is_E_or_T
+; E -> T RE
+; E.val = RE.val
+; RE.inh = T.val
+; traverse the tree first
+cmp dword [eax], T
+jne .check_RE_or_RT
+.is_E_or_T:
+mov eax, dword [ebp + 8]                ; load E
+lea eax, dword [eax + 12]               ; load children baddr
+mov eax, dword [eax]                    ; load T
+push dword [ebp + 12]
+push eax 
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]                ; load E
+lea eax, dword [eax + 12]               ; load children baddr
+mov eax, dword [eax + 4]                ; load RE
+mov edx, dword [eax + 8]                ; load child count
+lea eax, dword [eax + 12 + edx * 4 + 4] ; get RE.inh addr
+mov dword [ebp - 4], eax                ; save RE.inh addr
+mov eax, dword [ebp + 8]                ; load E
+mov eax, dword [eax + 12]               ; load T
+mov edx, dword [eax + 8]                ; load child count
+mov eax, dword [eax + 12 + edx * 4 + 8] ; load T.val
+mov edx, dword [ebp - 4]
+mov dword [edx], eax                    ; RE.inh = T.val
+mov eax, dword [ebp + 8]                ; load E
+lea eax, dword [eax + 12]               ; load children baddr
+mov eax, dword [eax + 4]                ; load RE
+push dword [ebp + 12]
+push eax 
+call visit_node
+add esp, 8
+; modify the attributes later
+mov eax, dword [ebp + 8]                ; load E
+mov edx, dword [eax + 8]                ; load child count
+lea eax, dword [eax + 12 + edx * 4 + 8] ; load E.val addr
+mov dword [ebp - 4], eax                ; save E.val addr
+mov eax, dword [ebp + 8]                ; load E
+lea eax, dword [eax + 12]               ; load children baddr
+mov eax, dword [eax + 4]                ; load RE
+mov edx, dword [eax + 8]                ; load child count
+mov eax, dword [eax + 12 + edx * 4 + 8] ; load RE.val addr
+mov edx, dword [ebp - 4]
+mov dword [edx], eax                    ; E.val = RE.val
+jmp .exit
+.check_RE_or_RT:
+cmp dword [eax], RE
+je .is_RE_or_RT
+cmp dword [eax], RT
+jne .check_F
+.is_RE_or_RT:
+; RE -> + T RE1 | - T RE1 | eps
+; + | -
+; RE1.inh = RE.inh + T.val | RE.inh - T.val
+; RE.val = RE1.val
+; eps 
+; RE.val = RE.inh
+cmp dword [eax + 8], 0
+je .epsilon_prod
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 4]    ; load T
+push dword [ebp + 12]
+push eax 
+call visit_node
+add esp, 8
+push dword [ebp + 12]
+call get_new_temp
+add esp, 4
+mov dword [ebp - 8], eax   ; save new temp label
+mov eax, dword [ebp + 8]                    ; load RE | RT
+lea eax, dword [eax + 12]                   ; load children baddr
+mov eax, dword [eax + 8]                    ; load RE1 | RT1
+mov edx, dword [eax + 8]                    ; load child count
+lea eax, dword [eax + 12 + edx * 4 + 4]     ; load RE1.inh, RT1.inh
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+
+push dword [ebp - 8]
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push equals
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]                    ; load RE | RT
+mov edx, dword [eax + 8]                    ; load child count
+mov eax, dword [eax + 12 + edx * 4 + 4]     ; load RE.inh
+push eax
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov eax, dword [eax]
+mov dword [ebp - 8], eax
+lea eax, dword [ebp - 8]
+push eax 
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+
+mov eax, dword [ebp + 8]    ; load RE | RT
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 8]    ; load RE1
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]     ; get RE1.val , RT1.val
+mov dword [ebp - 4], eax                    ; save
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]     ; get RE.val | RT.val
+mov edx, dword [ebp - 4]
+mov dword [eax], edx
+jmp .exit
+.epsilon_prod:
+mov edx, dword [eax + 8]
+lea edx, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], edx
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+.check_F:
+; F -> id | -F | !F | *F | &F | ( E ) | Num | true | false
+; F.val = id.val | Num.val | true | false
+; F.val = - F.val | ! F.val | * F.val | & F.val | E.val
+cmp dword [eax + 8], 1
+jne .unary_or_brackets
+mov edx, dword [eax + 12]
+cmp dword [edx], ID
+jne .not_id
+mov eax, dword [eax + 12]                   ; load id
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+.id:
+; id -> Na Rid
+; id.val = Rid.val
+; Rid.inh = Na.val
+mov eax, dword [eax + 12]                   ; load Na
+mov eax, dword [eax + 4]                    ; get token
+mov eax, dword [eax + 4]                    ; get lexeme
+mov dword [ebp - 8], eax
+mov eax, dword [ebp + 8]                    ; load id
+lea eax, dword [eax + 12]                   ; load children baddr
+mov eax, dword [eax + 4]                    ; load Rid
+mov edx, dword [eax + 8]                    ; load child count
+lea eax, dword [eax + 12 + edx * 4 + 4]     ; load Rid.inh addr
+mov edx, dword [ebp - 8]                    ; load Na.val
+mov dword [eax], edx                        ; Rid.inh = Na.val
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]     ; load id.val addr
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]     ; load Rid.val
+mov edx, dword [ebp - 4]
+mov dword [edx], eax                        ; id.val = Rid.val
+jmp .exit
+
+.Rid:
+; Rid -> idSel Rid | eps
+; idSel.inh = Rid.inh 
+; Rid1.inh = idSel.val
+; Rid.val = Rid1.val
+; eps -> Rid.val = Rid.inh
+cmp dword [eax + 8], 0
+je .empty_rid
+mov eax, dword [eax + 12]                   ; load idSel
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 4]     ; load idSel.inh addr
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4]     ; load Rid.inh value
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 4]     ; load idSel.inh addr
+mov edx, dword [ebp - 4]
+mov dword [eax], edx                        ; idSel.inh = Rid.inh
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 4]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+.empty_rid:
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]     ; load Rid.val addr
+mov edx, eax
+sub edx, 4                                  ; get Rid.inh addr
+mov edx, dword [edx]                        ; load Rid.inh value
+mov dword [eax], edx                        ; Rid.val = Rid.inh
+jmp .exit
+.idSel:
+; idSel -> .Na | [GenE]
+; new_temp = idSel.inh[offset(Na.val)]
+; new_temp = idSel.inh[GenE.val]
+; idSel.val = temp_label
+cmp dword [eax + 8], 3
+je .array_access
+.struct_access:
+push dword [ebp + 12]
+call get_new_temp
+add esp, 4
+mov dword [ebp - 8], eax
+push dword [ebp - 8]
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push equals
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4]
+push eax
+call print_string
+add esp, 4
+push left_bracket
+call print_string
+add esp, 4
+push offset_k
+call print_string
+add esp, 4
+push left_parenthesis
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 4]
+push eax
+call print_string
+add esp, 4
+push right_parenthesis
+call print_string
+add esp, 4
+push right_bracket
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+jmp .exit
+.array_access:
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+push dword [ebp + 12]
+call get_new_temp
+add esp, 4
+mov dword [ebp - 8], eax
+push dword [ebp - 8]
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push equals
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4]
+mov dword [ebp - 4], eax
+push eax
+call print_string
+add esp, 4
+push left_bracket
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+call print_string
+add esp, 4
+push right_bracket
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+jmp .exit
+
+.not_id:
+cmp dword [edx], NUM
+jne .not_num
+mov eax, dword [eax + 12]   ; load Num
+mov eax, dword [eax + 4]    ; load token
+mov eax, dword [eax + 4]    ; load lexeme
+push 10
+push itoa_buffer
+push eax
+call itoa
+add esp, 12
+push 11
+call heap_alloc
+add esp, 4
+mov dword [ebp - 8], eax
+mov edx, itoa_buffer
+.str_copy:
+cmp byte [edx], 0
+je .str_copy_end
+mov cl, byte [edx]
+mov byte [eax], cl
+inc eax
+inc edx
+jmp .str_copy
+.str_copy_end:
+mov byte [eax], 0
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+jmp .exit
+.not_num:
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 4]
+mov dword [ebp - 8], eax
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+jmp .exit
+.unary_or_brackets:
+cmp dword [eax + 8], 3
+jne .unary
+.brackets:
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+.unary:
+
+mov eax, dword [ebp + 8]    ; load F
+lea eax, dword [eax + 12]   ; load children baddr
+mov eax, dword [eax + 4]    ; load F1
+push dword [ebp + 12]
+push eax 
+call visit_node
+add esp, 8
+push dword [ebp + 12]
+call get_new_temp
+add esp, 4
+mov dword [ebp - 72], eax                   ; save new temp label
+mov eax, dword [ebp + 8]                    ; load F
+mov edx, dword [eax + 8]                    ; load child count
+lea eax, dword [eax + 12 + edx * 4 + 8]     ; load F.val addr
+mov edx, dword [ebp - 72]                   ; load new temp label
+mov dword [eax], edx                        ; save temp label
+
+push dword [ebp - 72]
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push equals
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov eax, dword [eax]
+mov dword [ebp - 8], eax
+lea eax, dword [ebp - 8]
+push eax 
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]                    ; load F
+lea eax, dword [eax + 12]                   ; load children baddr
+mov eax, dword [eax + 4]                    ; load F1
+mov edx, dword [eax + 8]                    ; load child count
+mov eax, dword [eax + 12 + edx * 4 + 8]     ; load F1.val
+push eax
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+
+.translate_statement:
+mov eax, dword [eax + 12]
+cmp dword [eax], ID
+je .assignment_st
+
+jmp .exit
+.assignment_st:
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push equals
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+jmp .exit
+
+.GenE:
+cmp dword [eax + 8], 1
+jne .translate_func_call
+.translate_expression:
+mov eax, dword [eax + 12]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+
+.translate_func_call:
+; TODO add func call translation
+jmp .exit
+
+.JointE:
+; JointE -> RelE Union
+; Union.inh = RelE.val
+; JointE.val = Union.val
+mov eax, dword [eax + 12]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 4]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+
+.RelE:
+; RelE -> E RRelE
+; RRelE.inh = E.val
+; RelE.val = RRelE.val
+mov eax, dword [eax + 12]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 4]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+
+
+.RRelE:
+; RRelE -> RelOp E RRelE | eps
+; new_temp = RRelE.inh RelOp.val E.val
+; RRelE1.inh = new_temp
+; RRelE.val = RRelE1.val
+; eps
+; RRelE.val = RRelE.inh
+cmp dword [eax + 8], 0
+je .empty_rrele
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+push dword [ebp + 12]
+call get_new_temp
+add esp, 4
+mov dword [ebp - 8], eax
+push eax
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push equals
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4]
+push eax
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 4]
+push eax
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 4]
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+
+.empty_rrele:
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+sub eax, 4
+mov eax, dword [eax]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+
+
+; Union -> Intersect UnionT
+; Intersect.inh = Union.inh
+; UnionT.inh = Intersect.val
+; Union.val = UnionT.val
+; eps
+; Union.val = Union.inh
+.Union:
+cmp dword [eax + 8], 0
+je .empty_union
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 4]
+mov edx, dword [ebp - 4]
+mov dword [eax], edx
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 4]
+mov edx, dword [ebp - 4]
+mov dword [eax], edx
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax 
+jmp .exit
+
+.empty_union:
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+sub eax, 4
+mov eax, dword [eax]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+
+
+; UnionT -> || RelE Intersect UnionT | eps
+; Intersect.inh = RelE.val
+; new_temp = UnionT.inh || Intersect.val
+; UnionT1.inh = new_temp
+; UnionT.val = UnionT1.val
+; eps 
+; UnionT.val = UnionT.inh
+.UnionT:
+cmp dword [eax + 8], 0
+je .empty_uniont
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 4]
+mov edx, dword [ebp - 4]
+mov dword [eax], edx
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+push dword [ebp + 12]
+call get_new_temp
+add esp, 4
+mov dword [ebp - 8], eax
+push dword [ebp - 8]
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push equals
+call print_string
+add esp, 4
+push space 
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4]
+push eax
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push or_op
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 4]
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 12]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+
+.empty_uniont:
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+sub eax, 4
+mov eax, dword [eax]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+
+
+; Intersect -> && JointE | eps
+; new_temp = Intersect.inh && JointE.val
+; Intersect.val = new_temp
+; eps
+; Intersect.val = Intersect.inh
+.Intersect:
+cmp dword [eax + 8], 0
+je .empty_intersect
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 8
+push dword [ebp + 12]
+call get_new_temp
+add esp, 4
+mov dword [ebp - 8], eax
+push dword [ebp - 8]
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push equals
+call print_string
+add esp, 4
+push space 
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4]
+push eax
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push and_op
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+jmp .exit
+
+.empty_intersect:
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 4], eax
+sub eax, 4
+mov eax, dword [eax]
+mov edx, dword [ebp - 4]
+mov dword [edx], eax
+jmp .exit
+
+.exit:
+leave
+ret
+
+
+; char* get_new_temp(uint* temp_counter)
+get_new_temp:
+push ebp
+mov ebp, esp
+sub esp, 8
+mov dword [ebp - 4], 0
+mov dword [ebp - 8], itoa_buffer
+mov eax, dword [ebp + 8]
+inc dword [eax]
+push 10
+push itoa_buffer
+push dword [eax]
+call itoa
+add esp, 12
+push 12
+call heap_alloc
+add esp, 4
+mov dword [ebp - 4], eax
+mov eax, dword [ebp - 4]
+mov dword [eax], 't'     ; load temp label
+.loop:
+mov edx, dword [ebp - 8]
+cmp byte [edx], 0
+je .end_loop
+inc dword eax
+mov dl, byte [edx]
+mov byte [eax], dl
+inc dword [ebp - 8]
+jmp .loop
+.end_loop:
+inc dword eax
+mov byte [eax], 0
+mov eax, dword [ebp - 4]
+leave
+ret
+
+
 struct_self_ref: db "ERROR: semantic error, incomplete type for variable '", 0
 struct_self_ref_end: db "' in struct '", 0
 var_red: db "ERROR: semantic error, variable '", 0
@@ -1393,5 +2524,4 @@ is_nonprimitive: db "nonprimitive type ref", 0
 main_k: db "main", 0
 pointer: db "*", 0
 array: db "[]", 0
-
-; TODO: add boolean checks to add_* functions for error detection
+offset_k: db "offset", 0
