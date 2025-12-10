@@ -971,6 +971,12 @@ mov eax, dword [eax + 12]   ; load FuncNa
 mov eax, dword [eax + 4]    ; load token
 mov eax, dword [eax + 4]    ; load lexeme
 mov dword [ebp - 8], eax    ; load new_funcna_lexeme
+push dword [ebp - 8]
+push dword [ebp + 20]
+call hash_map_get
+add esp, 8
+cmp eax, 0
+jne .func_redeclaration
 push dword [ebp + 16]
 push dword [ebp + 12]
 push dword [ebp - 4]
@@ -986,6 +992,17 @@ add esp, 12
 mov eax, 1
 leave
 ret 
+
+.func_redeclaration:
+push func_red
+call print_string
+add esp, 4
+push dword [ebp - 8]
+call print_string
+add esp, 4
+push func_red_end
+call print_string
+add esp, 4
 .error_exit:
 xor eax, eax 
 leave
