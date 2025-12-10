@@ -63,7 +63,7 @@ push prog
 
 .parse_loop:
 
-; cmp dword [ebp - jump_table_size - 12], 40
+; cmp dword [ebp - jump_table_size - 12], 25
 ; jl .skip 
 ; lea eax, dword [esp]
 ; push eax 
@@ -200,6 +200,8 @@ push dword [eax]
 call tag_to_str
 add esp, 4
 push eax
+call print_string
+add esp, 4
 push nl
 call print_string
 add esp, 4
@@ -1447,9 +1449,9 @@ leave
 ret 
 
 
-; body -> StS rSt | rSt                           // first(body) = {return, Na, if, while, do, FuncNa}
+; body -> StS rSt                                 // first(body) = {return, Na, if, while, do, FuncNa}
                                                 ; // follow(body) = { } } 
-; (body, return) -> rSt 
+; (body, return) -> StS rSt 
 ; (body, Na) -> StS rSt
 ; (body, if) -> StS rSt
 ; (body, while) -> StS rSt
@@ -1460,17 +1462,6 @@ push ebp
 mov ebp, esp
 sub esp, 4 
 push 0
-push rSt
-call get_linked_list
-add esp, 8
-mov dword [ebp - 4], eax 
-push dword [ebp - 4]
-push RETURN
-push body 
-push dword [ebp + 8]
-call jump_table_init
-add esp, 16
-push 0
 push StS
 call get_linked_list
 add esp, 8
@@ -1479,6 +1470,12 @@ push rSt
 push dword [ebp - 4]
 call linked_list_append
 add esp, 8
+push dword [ebp - 4]
+push RETURN
+push body 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
 push dword [ebp - 4]
 push NAME 
 push body 
@@ -3638,7 +3635,7 @@ push ebp
 mov ebp, esp
 cmp dword [ebp + 8], NAME 
 jl .ret_char
-cmp dword [ebp + 8], TYNAME
+cmp dword [ebp + 8], FALSE
 jl .ret_num
 
 .ret_nonterminal:
