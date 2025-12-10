@@ -198,6 +198,19 @@ push dword [ebp - 28]
 call string_builder_clear
 add esp, 8
 mov eax, dword [ebp - 52]
+; flags cleanup
+cmp dword [eax], TYNAME
+jne .check_funcname
+mov eax, dword [ebp - 40]
+mov dword [eax], 0
+jmp .exit
+.check_funcname:
+cmp dword [eax], FUNCNAME
+jne .exit
+mov eax, dword [ebp - 44]
+mov dword [eax], 0
+.exit
+mov eax, dword [ebp - 52]
 leave 
 ret 
 .init_new_token:
