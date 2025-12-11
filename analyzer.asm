@@ -1012,7 +1012,7 @@ ret
 construct_func:
 push ebp
 mov ebp, esp
-sub esp, 72
+sub esp, 76
 mov dword [ebp - 4], 0      ; FuD pointer
 mov dword [ebp - 8], 0      ; new_name_lexeme pointer
 mov dword [ebp - 12], 0     ; type_lexeme pointer
@@ -1031,6 +1031,7 @@ mov dword [ebp - 60], 0     ; body pointer
 mov dword [ebp - 64], 0     ; StS pointer
 mov dword [ebp - 68], 0     ; St pointer
 mov dword [ebp - 72], 0     ; temp_var counter
+mov dword [ebp - 76], 0     ; branch_label counter
 mov eax, dword [ebp + 8]
 mov dword [ebp - 4], eax    ; save FuD
 lea eax, dword [eax + 12]   ; get FuD children
@@ -1323,11 +1324,13 @@ mov dword [ebp - 64], edx   ; save next StS
 mov eax, dword [eax + 12]   ; load St
 mov dword [ebp - 68], eax   ; save St
 mov eax, dword [ebp - 68]   ; load St
+lea edx, dword [ebp - 76]
+push edx
 lea edx, dword [ebp - 72]
 push edx
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov dword [ebp - 72], 0     ; zero out the counter
 jmp .statements_loop
 .end_statements_loop:
@@ -1421,13 +1424,16 @@ ret
 ; leave
 ; ret 
 
-; void visit_node(Tree_Node* node, uint* temp_counter, char* temp_label)
+; void visit_node(Tree_Node* node, uint* temp_counter)
 visit_node:
 push ebp
 mov ebp, esp 
-sub esp, 8
+sub esp, 20
 mov dword [ebp - 4], 0      ; address pointer for either inh or val
 mov dword [ebp - 8], 0      ; char* buffer
+mov dword [ebp - 12], 0     ; char* buffer
+mov dword [ebp - 16], 0     ; nested temp_counter
+mov dword [ebp - 20], 0     ; node buffer
 mov eax, dword [ebp + 8]    ; load node
 cmp dword [eax], St
 je .translate_statement
@@ -1463,10 +1469,11 @@ jne .check_RE_or_RT
 mov eax, dword [ebp + 8]                ; load E
 lea eax, dword [eax + 12]               ; load children baddr
 mov eax, dword [eax]                    ; load T
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax 
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]                ; load E
 lea eax, dword [eax + 12]               ; load children baddr
 mov eax, dword [eax + 4]                ; load RE
@@ -1482,10 +1489,11 @@ mov dword [edx], eax                    ; RE.inh = T.val
 mov eax, dword [ebp + 8]                ; load E
 lea eax, dword [eax + 12]               ; load children baddr
 mov eax, dword [eax + 4]                ; load RE
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax 
 call visit_node
-add esp, 8
+add esp, 12
 ; modify the attributes later
 mov eax, dword [ebp + 8]                ; load E
 mov edx, dword [eax + 8]                ; load child count
@@ -1516,10 +1524,11 @@ je .epsilon_prod
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]   ; load children baddr
 mov eax, dword [eax + 4]    ; load T
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax 
 call visit_node
-add esp, 8
+add esp, 12
 push dword [ebp + 12]
 call get_new_temp
 add esp, 4
@@ -1579,10 +1588,11 @@ add esp, 4
 mov eax, dword [ebp + 8]    ; load RE | RT
 lea eax, dword [eax + 12]   ; load children baddr
 mov eax, dword [eax + 8]    ; load RE1
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
@@ -1614,10 +1624,11 @@ mov edx, dword [eax + 12]
 cmp dword [edx], ID
 jne .not_id
 mov eax, dword [eax + 12]                   ; load id
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -1647,10 +1658,11 @@ mov dword [eax], edx                        ; Rid.inh = Na.val
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]     ; load id.val addr
@@ -1688,10 +1700,11 @@ mov edx, dword [ebp - 4]
 mov dword [eax], edx                        ; idSel.inh = Rid.inh
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
@@ -1707,10 +1720,11 @@ mov dword [edx], eax
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -1797,10 +1811,11 @@ jmp .exit
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 push dword [ebp + 12]
 call get_new_temp
 add esp, 4
@@ -1897,10 +1912,11 @@ jne .unary
 .brackets:
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -1918,10 +1934,11 @@ jmp .exit
 mov eax, dword [ebp + 8]    ; load F
 lea eax, dword [eax + 12]   ; load children baddr
 mov eax, dword [eax + 4]    ; load F1
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax 
 call visit_node
-add esp, 8
+add esp, 12
 push dword [ebp + 12]
 call get_new_temp
 add esp, 4
@@ -1971,20 +1988,23 @@ add esp, 4
 mov eax, dword [eax + 12]
 cmp dword [eax], ID
 je .assignment_st
-
+cmp dword [eax], IF
+je .branch_statement
 jmp .exit
 .assignment_st:
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
 mov edx, dword [eax + 8]
@@ -2014,15 +2034,184 @@ call print_string
 add esp, 4
 jmp .exit
 
+.branch_statement:
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+push dword [ebp + 16]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 12
+push if_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax 
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push goto_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push dword [ebp + 16]
+call get_new_label
+add esp, 4
+mov dword [ebp - 8], eax
+push eax
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+push dword [ebp + 16]
+call get_new_label
+add esp, 4
+mov dword [ebp - 12], eax
+push goto_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push dword [ebp - 12]
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+push dword [ebp - 8]
+call print_string
+add esp, 4
+push colon_k
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 20]
+mov dword [ebp - 20], eax   ; save Sts
+.statements_loop:
+mov eax, dword [ebp - 20]
+cmp dword [eax + 8], 0
+je .end_statements_loop
+lea edx, dword [eax + 12]
+mov edx, dword [edx + 4]    ; load StS
+mov dword [ebp - 20], edx   ; save next StS
+mov eax, dword [eax + 12]   ; load St
+push dword [ebp + 16]
+lea edx, dword [ebp - 16]
+push edx
+push eax
+call visit_node
+add esp, 12
+mov dword [ebp - 16], 0     ; zero out the counter
+jmp .statements_loop
+.end_statements_loop:
+
+mov dword [ebp - 16], 0     ; reset the counter
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 28]   ; load MatchedElse
+mov dword [ebp - 20], eax
+cmp dword [eax + 8], 0
+je .no_else_part
+; generate the else
+mov eax, dword [ebp - 12]
+mov dword [ebp - 8], eax    ; move second label to the first slot
+push dword [ebp + 16]
+call get_new_label
+add esp, 4
+mov dword [ebp - 12], eax
+push goto_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push dword [ebp - 12]
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+push dword [ebp - 8]
+call print_string
+add esp, 4
+push colon_k
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+mov eax, dword [ebp - 20]   ; load MatchedElse
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]    ; load StS
+mov dword [ebp - 20], eax
+.statements_loop_2:
+mov eax, dword [ebp - 20]
+cmp dword [eax + 8], 0
+je .end_statements_loop_2
+lea edx, dword [eax + 12]
+mov edx, dword [edx + 4]    ; load StS
+mov dword [ebp - 20], edx   ; save next StS
+mov eax, dword [eax + 12]   ; load St
+push dword [ebp + 16]
+lea edx, dword [ebp - 16]
+push edx
+push eax
+call visit_node
+add esp, 12
+mov dword [ebp - 16], 0     ; zero out the counter
+jmp .statements_loop_2
+.end_statements_loop_2:
+push dword [ebp - 12]
+call print_string
+add esp, 4
+push colon_k
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+jmp .exit
+.no_else_part:
+push dword [ebp - 12]
+call print_string
+add esp, 4
+push colon_k
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+jmp .exit
+
 .GenE:
 cmp dword [eax + 8], 1
 jne .translate_func_call
 .translate_expression:
 mov eax, dword [eax + 12]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -2044,10 +2233,11 @@ jmp .exit
 ; Union.inh = RelE.val
 ; JointE.val = Union.val
 mov eax, dword [eax + 12]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
@@ -2063,10 +2253,11 @@ mov dword [edx], eax
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -2085,10 +2276,11 @@ jmp .exit
 ; RRelE.inh = E.val
 ; RelE.val = RRelE.val
 mov eax, dword [eax + 12]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
@@ -2104,10 +2296,11 @@ mov dword [edx], eax
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -2133,10 +2326,11 @@ cmp dword [eax + 8], 0
 je .empty_rrele
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 push dword [ebp + 12]
 call get_new_temp
 add esp, 4
@@ -2194,10 +2388,11 @@ mov dword [eax], edx
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -2243,10 +2438,11 @@ mov edx, dword [ebp - 4]
 mov dword [eax], edx
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
 mov edx, dword [eax + 8]
@@ -2262,10 +2458,11 @@ mov dword [eax], edx
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -2303,10 +2500,11 @@ cmp dword [eax + 8], 0
 je .empty_uniont
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
@@ -2323,10 +2521,11 @@ mov dword [eax], edx
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 push dword [ebp + 12]
 call get_new_temp
 add esp, 4
@@ -2379,10 +2578,11 @@ mov dword [eax], edx
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 12]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -2417,10 +2617,11 @@ cmp dword [eax + 8], 0
 je .empty_intersect
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 8
+add esp, 12
 push dword [ebp + 12]
 call get_new_temp
 add esp, 4
@@ -2484,6 +2685,44 @@ jmp .exit
 leave
 ret
 
+; char* get_new_label(uint* branch_label_counter)
+get_new_label:
+push ebp
+mov ebp, esp
+sub esp, 8
+mov dword [ebp - 4], 0
+mov dword [ebp - 8], itoa_buffer
+mov eax, dword [ebp + 8]
+inc dword [eax]
+push 10
+push itoa_buffer
+push dword [eax]
+call itoa
+add esp, 12
+push 13
+call heap_alloc
+add esp, 4
+mov dword [ebp - 4], eax
+mov eax, dword [ebp - 4]
+mov dword [eax], '.'    
+inc dword eax
+mov dword [eax], 'L'
+.loop:
+mov edx, dword [ebp - 8]
+cmp byte [edx], 0
+je .end_loop
+inc dword eax
+mov dl, byte [edx]
+mov byte [eax], dl
+inc dword [ebp - 8]
+jmp .loop
+.end_loop:
+inc dword eax
+mov byte [eax], 0
+mov eax, dword [ebp - 4]
+leave
+ret
+
 
 ; char* get_new_temp(uint* temp_counter)
 get_new_temp:
@@ -2542,3 +2781,6 @@ main_k: db "main", 0
 pointer: db "*", 0
 array: db "[]", 0
 offset_k: db "offset", 0
+label_k: db ".L", 0
+colon_k: db ":", 0
+goto_k: db "goto", 0
