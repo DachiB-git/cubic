@@ -1989,7 +1989,7 @@ mov eax, dword [eax + 12]
 cmp dword [eax], ID
 je .assignment_st
 cmp dword [eax], IF
-je .branch_statement
+je .if_statement
 jmp .exit
 .assignment_st:
 push dword [ebp + 16]
@@ -2034,7 +2034,7 @@ call print_string
 add esp, 4
 jmp .exit
 
-.branch_statement:
+.if_statement:
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
