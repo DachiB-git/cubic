@@ -1334,7 +1334,16 @@ add esp, 12
 mov dword [ebp - 72], 0     ; zero out the counter
 jmp .statements_loop
 .end_statements_loop:
-
+mov eax, dword [ebp - 60]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]    ; load rSt
+lea edx, dword [ebp - 76]
+push edx
+lea edx, dword [ebp - 72]
+push edx
+push eax
+call visit_node
+add esp, 12
 ; get func body
 mov eax, dword [ebp - 4]    ; load FuD
 lea eax, dword [eax + 12]   ; load children baddr
@@ -1437,6 +1446,8 @@ mov dword [ebp - 20], 0     ; node buffer
 mov eax, dword [ebp + 8]    ; load node
 cmp dword [eax], St
 je .translate_statement
+cmp dword [eax], rSt
+je .translate_return_statement
 cmp dword [eax], GenE
 je .GenE
 cmp dword [eax], JointE
@@ -1983,6 +1994,34 @@ add esp, 4
 push nl
 call print_string
 add esp, 4
+
+.translate_return_statement:
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+push dword [ebp + 16]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 4
+push return_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+jmp .exit
 
 .translate_statement:
 mov eax, dword [eax + 12]
