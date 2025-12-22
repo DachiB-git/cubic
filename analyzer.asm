@@ -1940,8 +1940,8 @@ mov eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
 jmp .exit
-.unary:
 
+.unary:
 mov eax, dword [ebp + 8]    ; load F
 lea eax, dword [eax + 12]   ; load children baddr
 mov eax, dword [eax + 4]    ; load F1
@@ -1994,6 +1994,7 @@ add esp, 4
 push nl
 call print_string
 add esp, 4
+jmp .exit
 
 .translate_return_statement:
 mov eax, dword [ebp + 8]
