@@ -63,7 +63,7 @@ push prog
 
 .parse_loop:
 
-; cmp dword [ebp - jump_table_size - 12], 25
+; cmp dword [ebp - jump_table_size - 12], 50
 ; jl .skip 
 ; lea eax, dword [esp]
 ; push eax 
@@ -1501,7 +1501,7 @@ push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 push dword [ebp - 4]
-push FUNC
+push FUNCNAME
 push body 
 push dword [ebp + 8]
 call jump_table_init
