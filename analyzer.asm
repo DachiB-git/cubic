@@ -1994,7 +1994,11 @@ cmp dword [eax], DO
 je .do_while_statement
 cmp dword [eax], WHILE
 je .while_statement
-jmp .exit
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [eax], 0  ; clear GenE val
+jmp .func_call
 .assignment_st:
 push dword [ebp + 16]
 push dword [ebp + 12]
@@ -2405,9 +2409,115 @@ call print_string
 add esp, 4
 jmp .exit
 
+.func_call:
+mov dword [ebp - 16], 0
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]    ; load ArgS
+; load first Arg 
+cmp dword [eax + 8], 0
+je .end_args_loop
+mov edx, dword [eax + 12]   ; load Arg
+mov edx, dword [edx + 12]   ; load GenE
+mov dword [ebp - 4], edx
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]    ; load RArgs
+mov dword [ebp - 20], eax   ; save RArgs
+push dword [ebp + 16]
+lea eax, dword [ebp - 16]
+push eax
+push edx
+call visit_node
+add esp, 12
+push param_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp - 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+mov dword [ebp - 16], 0
+.args_loop:
+mov eax, dword [ebp - 20]
+cmp dword [eax + 8], 0
+je .end_args_loop
+lea eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+mov dword [ebp - 20], edx
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 12]
+mov dword [ebp - 4], eax
+push dword [ebp + 16]
+lea edx, dword [ebp - 16]
+push edx
+push eax
+call visit_node
+add esp, 4
+push param_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp - 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+mov dword [ebp - 16], 0
+jmp .args_loop
+.end_args_loop:
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+cmp eax, 0
+je .no_return
+push eax
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push equals
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+.no_return:
+push call_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 4]
+push eax
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+jmp .exit
+
 .GenE:
 cmp dword [eax + 8], 1
-jne .translate_func_call
+jne .pre_func_call
 .translate_expression:
 mov eax, dword [eax + 12]
 push dword [ebp + 16]
@@ -2427,9 +2537,17 @@ mov edx, dword [ebp - 4]
 mov dword [edx], eax
 jmp .exit
 
-.translate_func_call:
-; TODO add func call translation
-jmp .exit
+.pre_func_call:
+push dword [ebp + 12]
+call get_new_temp
+add esp, 4
+mov dword [ebp - 8], eax
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+jmp .func_call
 
 .JointE:
 ; JointE -> RelE Union
@@ -2987,3 +3105,5 @@ offset_k: db "offset", 0
 label_k: db ".L", 0
 colon_k: db ":", 0
 goto_k: db "goto", 0
+param_k: db "param", 0
+call_k: db "call", 0
