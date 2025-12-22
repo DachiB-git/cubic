@@ -1992,6 +1992,8 @@ cmp dword [eax], IF
 je .if_statement
 cmp dword [eax], DO
 je .do_while_statement
+cmp dword [eax], WHILE
+je .while_statement
 jmp .exit
 .assignment_st:
 push dword [ebp + 16]
@@ -2272,6 +2274,130 @@ push space
 call print_string
 add esp, 4
 push dword [ebp - 8]
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+jmp .exit
+
+.while_statement:
+push dword [ebp + 16]
+call get_new_label
+add esp, 4
+mov dword [ebp - 4], eax
+push eax
+call print_string
+add esp, 4
+push colon_k
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+push dword [ebp + 16]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 12
+push if_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push goto_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push dword [ebp + 16]
+call get_new_label
+add esp, 4
+mov dword [ebp - 8], eax
+push dword [ebp - 8]
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+push dword [ebp + 16]
+call get_new_label
+add esp, 4
+mov dword [ebp - 12], eax
+push goto_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push dword [ebp - 12]
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+push dword [ebp - 8]
+call print_string
+add esp, 4
+push colon_k
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 20]
+mov dword [ebp - 20], eax
+.statements_loop_4:
+mov eax, dword [ebp - 20]
+cmp dword [eax + 8], 0
+je .end_statements_loop_4
+lea edx, dword [eax + 12]
+mov edx, dword [edx + 4]    ; load StS
+mov dword [ebp - 20], edx   ; save next StS
+mov eax, dword [eax + 12]   ; load St
+push dword [ebp + 16]
+lea edx, dword [ebp - 16]
+push edx
+push eax
+call visit_node
+add esp, 12
+mov dword [ebp - 16], 0     ; zero out the counter
+jmp .statements_loop_4
+.end_statements_loop_4:
+push goto_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push dword [ebp - 4]
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+push dword [ebp - 12]
+call print_string
+add esp, 4
+push colon_k
 call print_string
 add esp, 4
 push nl
