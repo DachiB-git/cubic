@@ -2450,6 +2450,7 @@ add esp, 4
 jmp .exit
 
 .func_call:
+mov dword [ebp - 8], 0
 mov dword [ebp - 16], 0
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
@@ -2457,6 +2458,7 @@ mov eax, dword [eax + 8]    ; load ArgS
 ; load first Arg 
 cmp dword [eax + 8], 0
 je .end_args_loop
+inc dword [ebp - 8]
 mov edx, dword [eax + 12]   ; load Arg
 mov edx, dword [edx + 12]   ; load GenE
 mov dword [ebp - 4], edx
@@ -2489,6 +2491,7 @@ mov dword [ebp - 16], 0
 mov eax, dword [ebp - 20]
 cmp dword [eax + 8], 0
 je .end_args_loop
+inc dword [ebp - 8]
 lea eax, dword [eax + 12]
 mov edx, dword [eax + 8]
 mov dword [ebp - 20], edx
@@ -2548,6 +2551,20 @@ mov eax, dword [eax + 12]
 mov eax, dword [eax + 4]
 mov eax, dword [eax + 4]
 push eax
+call print_string
+add esp, 4
+push comma_k
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+push 10
+push itoa_buffer
+push dword [ebp - 8]
+call itoa
+add esp, 12
+push itoa_buffer
 call print_string
 add esp, 4
 push nl
@@ -3122,6 +3139,10 @@ leave
 ret
 
 
+; STRUCTURE: quad <int op, int arg1, int arg2, int arg3> 
+; quad* get_quad(int op, int arg1, int arg2, int arg3)
+get_quad:
+
 struct_self_ref: db "ERROR: semantic error, incomplete type for variable '", 0
 struct_self_ref_end: db "' in struct '", 0
 var_red: db "ERROR: semantic error, variable '", 0
@@ -3144,6 +3165,7 @@ array: db "[]", 0
 offset_k: db "offset", 0
 label_k: db ".L", 0
 colon_k: db ":", 0
+comma_k: db ",", 0
 goto_k: db "goto", 0
 param_k: db "param", 0
 call_k: db "call", 0
