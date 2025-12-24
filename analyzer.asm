@@ -977,11 +977,12 @@ call hash_map_get
 add esp, 8
 cmp eax, 0
 jne .func_redeclaration
+push dword [ebp + 20]
 push dword [ebp + 16]
 push dword [ebp + 12]
 push dword [ebp - 4]
 call construct_func
-add esp, 12
+add esp, 16
 cmp eax, 0      ; semantic error in func declaration
 je .error_exit
 push eax
@@ -1032,6 +1033,15 @@ mov dword [ebp - 64], 0     ; StS pointer
 mov dword [ebp - 68], 0     ; St pointer
 mov dword [ebp - 72], 0     ; temp_var counter
 mov dword [ebp - 76], 0     ; branch_label counter
+push 16
+push itoa_buffer
+push dword [ebp + 20]
+call itoa
+add esp, 12
+push itoa_buffer
+call print_string
+add esp, 4
+jmp .error_exit
 mov eax, dword [ebp + 8]
 mov dword [ebp - 4], eax    ; save FuD
 lea eax, dword [eax + 12]   ; get FuD children
@@ -1448,10 +1458,29 @@ ret
 
 ; node* visit_node(Tree_Node* node, uint* temp_counter, uint* label_counter, node* TAC_list, table* var_table, table* func_table, char* func_name)
 ; returns a linked_list of TAC quads or null if an error is found turing translation
+; TODO: add error checking
 visit_node:
 push ebp
 mov ebp, esp 
 sub esp, 20
+
+push 16
+push itoa_buffer
+push dword [ebp + 28]
+call itoa
+add esp, 12
+push itoa_buffer
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+; push dword [ebp + 32]
+; call print_string
+; add esp, 4
+; push nl
+; call print_string
+; add esp, 4
 mov dword [ebp - 4], 0      ; address pointer for either inh or val
 mov dword [ebp - 8], 0      ; char* buffer
 mov dword [ebp - 12], 0     ; char* buffer
@@ -1503,6 +1532,8 @@ push dword [ebp + 12]
 push eax 
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]                ; load E
 lea eax, dword [eax + 12]               ; load children baddr
 mov eax, dword [eax + 4]                ; load RE
@@ -1527,6 +1558,8 @@ push dword [ebp + 12]
 push eax 
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 ; modify the attributes later
 mov eax, dword [ebp + 8]                ; load E
 mov edx, dword [eax + 8]                ; load child count
@@ -1566,6 +1599,8 @@ push dword [ebp + 12]
 push eax 
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 push dword [ebp + 12]
 call get_new_temp
 add esp, 4
@@ -1634,6 +1669,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
@@ -1674,6 +1711,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -1693,6 +1732,52 @@ mov eax, dword [eax + 12]                   ; load Na
 mov eax, dword [eax + 4]                    ; get token
 mov eax, dword [eax + 4]                    ; get lexeme
 mov dword [ebp - 8], eax
+; check if id is declared in function frame or gm
+push dword [ebp + 32]   ; func name
+push dword [ebp + 28]   ; func_table
+call hash_map_get
+add esp, 8
+push 16
+push itoa_buffer
+push dword [ebp + 32]
+call itoa
+add esp, 12
+push itoa_buffer
+call print_string
+add esp, 4
+mov eax, dword [eax + 8]    ; get func_entry var_table
+push dword [ebp - 8]
+push eax
+call hash_map_get
+add esp, 8
+cmp eax, 0                  ; variable not present in function frame
+jne .valid_variable
+.check_in_gm:
+push dword [ebp - 8]
+push dword [ebp + 24]
+call hash_map_get
+add esp, 8
+cmp eax, 0
+jne .valid_variable
+.undeclared_variable:
+push var_undec
+call print_string
+add esp, 4
+push dword [ebp - 8]
+call print_string
+add esp, 4
+push var_undec_func
+call print_string
+add esp, 4
+push dword [ebp + 32]
+call print_string
+add esp, 4
+push single_quote_close
+call print_string
+add esp, 4
+jmp .error_exit
+
+.valid_variable
 mov eax, dword [ebp + 8]                    ; load id
 lea eax, dword [eax + 12]                   ; load children baddr
 mov eax, dword [eax + 4]                    ; load Rid
@@ -1712,6 +1797,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]     ; load id.val addr
@@ -1758,6 +1845,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
@@ -1782,6 +1871,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -1877,6 +1968,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 push dword [ebp + 12]
 call get_new_temp
 add esp, 4
@@ -1982,6 +2075,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -2008,6 +2103,8 @@ push dword [ebp + 12]
 push eax 
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 push dword [ebp + 12]
 call get_new_temp
 add esp, 4
@@ -2067,6 +2164,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 push return_k
 call print_string
 add esp, 4
@@ -2111,6 +2210,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
@@ -2123,6 +2224,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
 mov edx, dword [eax + 8]
@@ -2165,6 +2268,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 push if_k
 call print_string
 add esp, 4
@@ -2246,6 +2351,8 @@ push edx
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov dword [ebp - 16], 0     ; zero out the counter
 jmp .statements_loop
 .end_statements_loop:
@@ -2307,6 +2414,8 @@ push edx
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov dword [ebp - 16], 0     ; zero out the counter
 jmp .statements_loop_2
 .end_statements_loop_2:
@@ -2368,6 +2477,8 @@ push edx
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov dword [ebp - 16], 0     ; zero out the counter
 jmp .statements_loop_3
 .end_statements_loop_3:
@@ -2384,6 +2495,8 @@ push edx
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 push if_k
 call print_string
 add esp, 4
@@ -2441,6 +2554,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 push if_k
 call print_string
 add esp, 4
@@ -2521,6 +2636,8 @@ push edx
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov dword [ebp - 16], 0     ; zero out the counter
 jmp .statements_loop_4
 .end_statements_loop_4:
@@ -2573,6 +2690,8 @@ push eax
 push edx
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 push param_k
 call print_string
 add esp, 4
@@ -2610,6 +2729,8 @@ push edx
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 push param_k
 call print_string
 add esp, 4
@@ -2692,6 +2813,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -2730,6 +2853,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
@@ -2754,6 +2879,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -2781,6 +2908,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
@@ -2805,6 +2934,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -2839,6 +2970,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 push dword [ebp + 12]
 call get_new_temp
 add esp, 4
@@ -2905,6 +3038,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -2959,6 +3094,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
 mov edx, dword [eax + 8]
@@ -2983,6 +3120,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -3029,6 +3168,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
@@ -3054,6 +3195,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 push dword [ebp + 12]
 call get_new_temp
 add esp, 4
@@ -3115,6 +3258,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -3158,6 +3303,8 @@ push dword [ebp + 12]
 push eax
 call visit_node
 add esp, 28
+cmp eax, 0
+je .error_exit
 push dword [ebp + 12]
 call get_new_temp
 add esp, 4
@@ -3216,6 +3363,11 @@ mov eax, dword [eax]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
 jmp .exit
+
+.error_exit:
+xor eax, eax 
+leave
+ret
 
 .exit:
 leave
@@ -3307,6 +3459,8 @@ var_red: db "ERROR: semantic error, variable '", 0
 var_red_gm: db "' redeclared in global memory", 10, 0
 var_red_func: db "' redeclared in function '", 0
 var_red_struct: db "' redeclared in struct '", 0
+var_undec: db "ERROR: semantic error, undeclared variable '", 0
+var_undec_func: db "' detected in function '", 0
 single_quote_close: db "'.", 10, 0
 param_red: db "ERROR: semantic error, parameter '", 0
 func_red: db "ERROR: semantic error, function '", 0
