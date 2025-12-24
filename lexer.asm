@@ -181,7 +181,7 @@ mov eax, dword [ebp - 52]
 cmp dword [eax], TYPEDEF
 jne .check_func_decl
 mov eax, dword [ebp - 40]
-mov dword [eax], 1          ; set type_detect flag to true
+mov dword [eax], 2          ; set type_detect flag
 jmp .new_decl_check
 .check_func_decl:
 mov eax, dword [ebp - 52]
@@ -197,6 +197,15 @@ push eax
 push dword [ebp - 28]
 call string_builder_clear
 add esp, 8
+mov eax, dword [ebp - 52]
+cmp dword [eax], TYPEDEF
+jne .dec_count
+mov eax, dword [ebp - 52]
+leave 
+ret 
+.dec_count:
+mov eax, dword [ebp - 40]
+dec dword [eax]
 mov eax, dword [ebp - 52]
 leave 
 ret 
