@@ -152,27 +152,6 @@ mov dword [eax + 12], edx
 leave
 ret 
 
-; entry* get_simple_entry(char* key, entry* entry)
-get_simple_entry:
-push ebp 
-mov ebp, esp 
-sub esp, 4
-push 16 
-call heap_alloc
-add esp, 4
-mov dword [ebp - 4], eax 
-mov eax, dword [ebp - 4]
-mov edx, dword [ebp + 8]
-mov dword [eax], edx 
-mov dword [eax + 4], SIMPLE
-mov edx, dword [ebp + 12]
-mov dword [eax + 8], edx
-mov edx, dword [ebp + 12]
-mov edx, dword [edx + 12]
-mov dword [eax + 12], edx
-leave
-ret 
-
 ; entry* get_composite_p_entry(char* key, entry* entry)
 get_composite_p_entry:
 push ebp
@@ -347,16 +326,10 @@ mov dword [edx], eax
 mov eax, edx
 leave
 ret
-; declare simple type
+; simple type aka shadow name
+; pass the declared type entry to the new type
 .simple_type:
-push dword [ebp - 12]
-push dword [ebp + 12]
-call hash_map_get
-add esp, 8
-push eax 
-push dword [ebp - 8]
-call get_simple_entry
-add esp, 8
+mov eax, dword [ebp - 20]
 leave
 ret
 .error_exit:
@@ -1128,13 +1101,8 @@ call hash_map_get
 add esp, 8
 mov dword [ebp - 40], eax
 ; check if array type in return
-.check_array_type_loop:
 cmp dword [eax + 4], ARRAY
 je .error_array_ret
-cmp dword [eax + 4], SIMPLE
-jne .no_array_ret
-mov eax, dword [eax + 8]
-jmp .check_array_type_loop
 .no_array_ret:
 push eax 
 push dword [ebp - 8]
@@ -1191,10 +1159,6 @@ jne .check1
 mov eax, dword [eax + 8]
 jmp .loop1
 .check1:
-cmp dword [eax + 4], SIMPLE
-jne .end_check1
-mov eax, dword [eax + 8]
-jmp .loop1
 .end_check1:
 mov eax, dword [eax + 12]
 mov edx, eax
@@ -1241,10 +1205,6 @@ jne .check2
 mov eax, dword [eax + 8]
 jmp .loop2
 .check2:
-cmp dword [eax + 4], SIMPLE
-jne .end_check2
-mov eax, dword [eax + 8]
-jmp .loop2
 .end_check2:
 mov eax, dword [eax + 12]
 mov edx, eax
@@ -1297,10 +1257,6 @@ jne .check3
 mov eax, dword [eax + 8]
 jmp .loop3
 .check3:
-cmp dword [eax + 4], SIMPLE
-jne .end_check3
-mov eax, dword [eax + 8]
-jmp .loop3
 .end_check3:
 mov eax, dword [eax + 12]
 mov edx, eax
