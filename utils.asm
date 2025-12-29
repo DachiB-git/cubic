@@ -78,6 +78,55 @@ mov eax, dword [ebp - 4]
 leave
 ret 
 
+; linked_list* linked_list_get(linked_list* list, int index)
+linked_list_get:
+push ebp
+mov ebp, esp
+cmp dword [ebp + 8], 0
+je .error_exit
+cmp dword [ebp + 12], 0
+jl .error_exit
+.loop:
+mov eax, dword [ebp + 8]
+cmp eax, 0
+je .error_exit
+mov eax, dword [ebp + 12]
+cmp eax, 0
+je .exit
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 4]
+mov dword [ebp + 8], eax
+dec dword [ebp + 12]
+jmp .loop
+.exit:
+mov eax, dword [ebp + 8]
+leave
+ret
+
+.error_exit:
+xor eax, eax
+leave
+ret
+
+; uint linked_list_size(linked_list* list)
+linked_list_size:
+push ebp
+mov ebp, esp
+sub esp, 4
+mov dword [ebp - 4], 0  ; size counter
+.loop:
+cmp dword [ebp + 8], 0
+je .exit
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 4]
+mov dword [ebp + 8], eax
+inc dword [ebp - 4]
+jmp .loop
+.exit:
+mov eax, dword [ebp - 4]
+leave
+ret
+
 ; prints linked_list elements 
 print_linked_list:
 push ebp 
