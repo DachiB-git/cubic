@@ -3752,20 +3752,6 @@ ret
 check_if_valid_binary:
 push ebp
 mov ebp, esp
-mov eax, dword [ebp + 12]
-push dword [eax]
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-mov eax, dword [ebp + 16]
-push dword [eax]
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
 cmp dword [ebp + 8], ARITHMETIC_OP
 je .arithmetic
 cmp dword [ebp + 8], LOGIC_OP
