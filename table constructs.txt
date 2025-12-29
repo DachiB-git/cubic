@@ -1,16 +1,12 @@
 TypeEntry {
     key: string
-    complexity: Enum(PRIMITIVE, SIMPLE, POINTER, ARRAY, STRUCT)
+    complexity: Enum(PRIMITIVE, POINTER, ARRAY, STRUCTURE)
     type: TypeEntry
     size: UINT
 }
 
 PrimitiveTypeEntry(TypeEntry) {
-    type: Enum(INT, UINT, BOOL, CHAR)
-}
-
-SimpleTypeEntry(TypeEntry) {
-    type: TypeEntry
+    type: Enum(INTEGER, UINTEGER, BOOL, CHAR)
 }
 
 CompositeTypeEntry(TypeEntry) {
@@ -98,6 +94,7 @@ VarEntry {
 FuncEntry {
     key: string
     return_type: TypeEntry
-    variables: VarTable         ; includes both parameters and local variables
-    body: body
+    variables: VarTable             ; includes both parameters and local variables
+    params: linked_list(VarEntry)   ; params ordered by declaration sequence 
+    body: TAC_list
 }

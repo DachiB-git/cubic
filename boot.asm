@@ -2,7 +2,7 @@
 [org 0x7C00]
 %define drive_read_buffer 0x0000_7E00
 %define boot_drive_ptr 0x0000_0500
-%define source_code_start 0x0000_E800
+%define source_code_start 0x0000_FC00
 %define frame_buffer_ptr 0x000B_8000
 
 ; boot sector and BPB declarations
@@ -78,7 +78,7 @@ mov bx, 0x7C00 + 36 * 512
 int 0x13
 
 mov ah, 0x02    ; function
-mov al, 2       ; sector_count
+mov al, 12       ; sector_count
 mov ch, 0x01    ; low eight bits of cylinder
 mov cl, 0x01    ; third sector
 mov dh, 0x01    ; head
@@ -218,7 +218,6 @@ jmp $
 main:
 push ebp
 mov ebp, esp
-sub esp, 16
 call compiler_compile
 ; call lspci
 ; mov eax, 0
@@ -491,6 +490,7 @@ ret
 exit_success: db "Process terminated with exit code: 0x", 0
 error_msg: db "hash miss", 10, 0
 space: db " ", 0
+size_t: db "size: ", 0
 vertical_bar: db " | ", 0
 here: db "started lexing a keyword", 10, 0
 string_a: db "hello world", 0
@@ -498,4 +498,4 @@ string_b: db "hello world", 0
 true: db "strings are equal", 0
 false: db "strings are not equal", 0
 nl: db 10, 0
-times 27648 - ($ - $$) db 0
+times 32768 - ($ - $$) db 0

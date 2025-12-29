@@ -1,0 +1,145 @@
+id = GenE;
+quad <ASSIG_OP, left_op, right_op, null>
+
+a + b
+quad <PLUS_OP, a, b, post_op_type>
+
+type analysis
+
+type a, type b
+a is the same type as b
+if the primitive type and decorator 
+or structure type of a matches the primitive type 
+and decorator or structure type of b 
+i.e, somewhere in the type inheritance chain they hold the same type
+
+PRIMITIVE -> SIMPLE
+just a new name for a predefined primitive type
+int -> INT
+INT a, int b
+
+INT a   int b
+int a   int b
+typeof(a) == typeof(b)
+
+arrays decay to pointers (classic c behaviour)
+int[2] a    int* b
+int* a      int* b
+typeof(a) == typeof(b)
+
+if any of the types has a decorator and the other doesn't,
+simply short circuit the check and return false
+
+INT[2] a    int[2] b
+int[2] a    int[2] b
+
+int[4] a    int[10] b
+
+
+t1 = i + 1
+t2 = arr[i]
+t2 = t1
+
+x = a + b * c;
+
+t1 = b * c;
+t2 = a + t1;
+x = t2;
+
+mov eax, dword [ebp - 4]
+imul eax, dword [ebp - 8]
+mov edx, eax
+mov eax, dword [ebp - 12]
+add eax, edx
+mov dword [ebp - 16], eax 
+
+
+t1 = i + 5;
+t2
+
+mov eax, dword [ebp - 4]
+add eax, 1
+mov edx, dword [ebp - 4]
+mov dword [ebp - 12 + edx * 4], eax
+
+constant => variable
+
+
+x = a + 10 + b;
+
+t1 = a + 10;
+t2 = t1 + b;
+x = t2;
+mov eax, dword [ebp - 4]
+add eax, 10
+add eax, dword [ebp - 8]
+mov dword [ebp - 12], eax
+
+int* x;
+
+x = &a + b;
+lea eax, dword [ebp - 4]
+add eax, dword [ebp - 8]
+mov dword [ebp - 8], eax
+
+x = x + a; x = a + x;
+mov eax, dword [ebp - 8]
+mov edx, dword [ebp - 4]
+sal edx, 2
+add eax, edx
+mov dword [ebp - 8], eax
+
+x = a + b + c;
+t1 = a + b;
+t2 = t1 + c;
+
+bool | char => int
+1 => 4
+
+any type shrinks to bool since it is a test against 0
+in any other case only char gets extended to int and int shrinks to char
+
+int x = a || b;
+mov eax, dword [ebp - 4]
+or eax, dword [ebp - 8]
+test eax
+
+
+int x;
+x = -x
+
+<ID, x, 0, type>
+<NUM, 10, 0, 0> always interpreted as an int type
+<PLUS_OP, x, 10, int>
+
+if (op.NUM)
+
+else
+{
+    if (quad.type.complexity == PRIMITIVE)
+    {
+        if (quad.type.type)
+    }
+    else {
+        // print error message
+        return 0;
+    }
+}
+
+arithmetic operations
+---------------------
+between primitives or pointer and primitives
+conforms to primitives or pointer
+
+
+logical operations
+--------------------
+between all values other than structure
+conforms to bool
+
+assignment operation
+--------------------
+between all types
+conforms structures to structure
+conforms pointers and arrays to pointers with exact subtypes
+conforms primitives to lvalue type (shrink or expand)

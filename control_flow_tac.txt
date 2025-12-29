@@ -16,3 +16,31 @@ L1: print_string("hello world");
     goto L3
 L2: print_string("dog");
 L3:
+
+
+
+while (1) {print_string("loop")};
+
+.L1:
+if 1 goto .L2
+goto .L3
+.L2:
+print_string("loop");
+goto .L1
+.L3:
+
+do {print_string("loop")} while (1)
+
+.L1:
+print_string("loop");
+t1 = 1;
+if t1 goto .L1
+
+.S1: db "loop", 0
+
+.L1:
+push .S1
+call print_string
+mov eax, 1
+cmp eax, 0
+jne .L1

@@ -85,12 +85,12 @@ RRelE -> RelOp E RRelE | eps                    // first(RRelE) = {>, >=, <, <=,
                                                 // follow(RRelE) = {&&, ||, ], , , ;, )}
 RelOp -> > | >= | < | <= | == | !=              // first(RelOp) = {>, >=, <, <=, ==, !=}
 
-; Union -> || UnionT Union | eps                  // first(Union) = {||, eps}
-;                                                 // follow(Union) = {], , , ;, ), ||}
-; UnionT -> RelE Intersect                        // first(UnionT) = {id, -, !, *, &, (, Num, true, false}
-;                                                 // follow(UnionT) = {||}
-; Intersect -> && RelE Intersect | eps            // first(Intersect) = {&&, eps}
-;                                                 // follow(Intersect) = {||}
+Union -> || UnionT Union | eps                  // first(Union) = {||, eps}
+                                                // follow(Union) = {], , , ;, ), ||}
+UnionT -> RelE Intersect                        // first(UnionT) = {id, -, !, *, &, (, Num, true, false}
+                                                // follow(UnionT) = {||}
+Intersect -> && RelE Intersect | eps            // first(Intersect) = {&&, eps}
+                                                // follow(Intersect) = {||}
 
 E -> T RE
 RE -> + T RE

@@ -1,0 +1,17 @@
+func int add(int a, int b)
+{
+    return a + b;
+}
+
+func int main()
+{
+    int x;
+    char* p;
+    if (x == 10)
+    {
+        x = add(x, x);
+    }
+    x = x + 20;
+    p = &x;
+    return x;
+}

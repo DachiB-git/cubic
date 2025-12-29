@@ -1,10 +1,35 @@
 [bits 32]
 
 %define PRIMITIVE 0
-%define SIMPLE 1
-%define POINTER 2
-%define ARRAY 3
-%define STRUCTURE 4
+%define POINTER 1
+%define ARRAY 2
+%define STRUCTURE 3
+
+%define ARITHMETIC_OP 1
+%define LOGIC_OP 2
+
+%define START -1
+%define ASSIG_OP 0
+%define UNARY_MINUS_OP 1
+%define NEG_OP 2
+%define DEREF_OP 3
+%define ADDRESS_OP 4
+%define ACCESS_OP 5
+%define PLUS_OP 6
+%define MINUS_OP 7
+%define MUL_OP 8
+%define DIV_OP 9
+%define GOTO 10
+%define LABEL 11
+%define PARAM 12
+%define CALL 13
+
+; RE -> + T RE | - T RE | eps  
+; RT -> * F RT | / F RT | eps                     // first(RT) = {*, /, eps}
+; RelOp -> > | >= | < | <= | == | !=              // first(RelOp) = {>, >=, <, <=, ==, !=}
+; UnionT -> || RelE Intersect UnionT | eps
+; Intersect -> && RelE Intersect | eps
+
 
 ; bool analyzer(Tree_Node* root, table* type_table, table* var_table, table* func_table)
 analyzer:
@@ -111,12 +136,12 @@ leave
 ret
 
 
-; entry* get_func_entry(char* key, entry* r_type, hash_map* var_table, Tree_node* body)
+; entry* get_func_entry(char* key, entry* r_type, hash_map* var_table, linked_list* params, Tree_node* body)
 get_func_entry:
 push ebp
 mov ebp, esp 
 sub esp, 4
-push 16
+push 20
 call heap_alloc
 add esp, 4
 mov dword [ebp - 4], eax
@@ -129,6 +154,8 @@ mov edx, dword [ebp + 16]
 mov dword [eax + 8], edx 
 mov edx, dword [ebp + 20]
 mov dword [eax + 12], edx
+mov edx, dword [ebp + 24]
+mov dword [eax + 16], edx
 leave
 ret
 
@@ -986,7 +1013,7 @@ ret
 construct_func:
 push ebp
 mov ebp, esp
-sub esp, 76
+sub esp, 86
 mov dword [ebp - 4], 0      ; FuD pointer
 mov dword [ebp - 8], 0      ; new_name_lexeme pointer
 mov dword [ebp - 12], 0     ; type_lexeme pointer
@@ -1004,17 +1031,10 @@ mov dword [ebp - 56], 0     ; var_entry pointer
 mov dword [ebp - 60], 0     ; body pointer
 mov dword [ebp - 64], 0     ; StS pointer
 mov dword [ebp - 68], 0     ; St pointer
-mov dword [ebp - 72], 0     ; temp_var counter
+mov dword [ebp - 72], 0     ; TAC_list head node
 mov dword [ebp - 76], 0     ; branch_label counter
-push 16
-push itoa_buffer
-push dword [ebp + 20]
-call itoa
-add esp, 12
-push itoa_buffer
-call print_string
-add esp, 4
-jmp .error_exit
+mov dword [ebp - 82], 0     ; func_entry buffer
+mov dword [ebp - 86], 0     ; params linked_list
 mov eax, dword [ebp + 8]
 mov dword [ebp - 4], eax    ; save FuD
 lea eax, dword [eax + 12]   ; get FuD children
@@ -1104,13 +1124,11 @@ mov dword [ebp - 40], eax
 cmp dword [eax + 4], ARRAY
 je .error_array_ret
 .no_array_ret:
-push eax 
-push dword [ebp - 8]
-call get_simple_entry
-add esp, 8
+mov eax, dword [ebp - 40]
 .func_entry:
 ; eax has r_type entry at this point
 mov dword [ebp - 20], eax
+; load temp entry into the func table with r_type and key
 mov dword [ebp - 48], -8    ; init offset counter
 push 16 
 push 4
@@ -1150,6 +1168,12 @@ push dword [ebp - 28]
 call hash_map_get
 add esp, 8
 mov dword [ebp - 56], eax
+push 0
+push dword [ebp - 56]
+call get_linked_list
+add esp, 8
+mov dword [ebp - 86], eax
+mov eax, dword [ebp - 56]
 mov edx, dword [ebp - 48]
 mov dword [eax + 8], edx
 mov eax, dword [eax + 4]
@@ -1196,6 +1220,11 @@ push dword [ebp - 28]
 call hash_map_get
 add esp, 8
 mov dword [ebp - 56], eax
+push dword [ebp - 56]
+push dword [ebp - 86]
+call linked_list_append
+add esp, 8
+mov eax, dword [ebp - 56]
 mov edx, dword [ebp - 48]
 mov dword [eax + 8], edx
 mov eax, dword [eax + 4]
@@ -1273,7 +1302,32 @@ mov dword [eax + 8], edx
 mov eax, dword [ebp - 56]
 jmp .declared_vars_loop
 .no_vars_declared:
+push 0                      ; null pointer for TAC_list
+push dword [ebp - 86]       ; load params_linked_list
+push dword [ebp - 28]       ; load func var_table
+push dword [ebp - 20]       ; load r_type
+push dword [ebp - 8]        ; load FuncNa
+call get_func_entry
+add esp, 20
+mov dword [ebp - 82], eax
+push dword [ebp - 82]
+push dword [ebp - 8]
+push dword [ebp + 20]
+call hash_map_put
+add esp, 12
 ; static type checking and transformation to three address code of func body
+; init TAC_list with start quad
+push 0
+push 0
+push 0
+push START
+call get_quad
+add esp, 16
+push 0
+push eax
+call get_linked_list
+add esp, 8
+mov dword [ebp - 72], eax   ; store TAC_list
 mov eax, dword [ebp - 4]    ; load FuD
 lea eax, dword [eax + 12]   ; load children baddr
 mov eax, dword [eax + 36]   ; load body
@@ -1291,47 +1345,39 @@ mov eax, dword [eax + 12]   ; load St
 mov dword [ebp - 68], eax   ; save St
 push dword [ebp - 8]        ; FuncName
 push dword [ebp + 20]       ; func_table
+push dword [ebp - 28]       ; func var_table
 push dword [ebp + 16]       ; var_table
-push 0                      ; TAC_list TODO: add tac_list, now just a null pointer
+push dword [ebp + 12]       ; type_table
+push dword [ebp - 72]       ; TAC_list
 lea edx, dword [ebp - 76]
 push edx                    ; label_counter
-lea edx, dword [ebp - 72]
-push edx                    ; temp_counter
 mov eax, dword [ebp - 68]   ; load St
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-; TODO: append returned quad to TAC_list
-mov dword [ebp - 72], 0     ; zero out the counter
 jmp .statements_loop
 .end_statements_loop:
 push dword [ebp - 8]        ; FuncName
 push dword [ebp + 20]       ; func_table
+push dword [ebp - 28]       ; func var_table
 push dword [ebp + 16]       ; var_table
-push 0
-lea edx, dword [ebp - 76]
-push edx
-lea edx, dword [ebp - 72]
+push dword [ebp + 12]       ; type_table
+push dword [ebp - 72]       ; TAC_list
+lea edx, dword [ebp - 76]   ; label_counter
 push edx
 mov eax, dword [ebp - 60]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]    ; load rSt
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-; get func body
-mov eax, dword [ebp - 4]    ; load FuD
-lea eax, dword [eax + 12]   ; load children baddr
-push dword [eax + 36]       ; load body
-push dword [ebp - 28]       ; load func var_table
-push dword [ebp - 20]       ; load r_type
-push dword [ebp - 8]        ; load FuncNa
-call get_func_entry
-add esp, 16
+mov eax, dword [ebp - 82]
+mov edx, dword [ebp - 72]
+mov dword [eax + 16], edx
 leave
 ret
 
@@ -1412,36 +1458,23 @@ ret
 ; leave
 ; ret 
 
-; node* visit_node(Tree_Node* node, uint* temp_counter, uint* label_counter, node* TAC_list, table* var_table, table* func_table, char* func_name)
+; node* visit_node(Tree_Node* node, uint* label_counter, node* TAC_list, table* type_table, table* var_table, table* func_var_table, table* func_table, char* func_name)
 ; returns a linked_list of TAC quads or null if an error is found turing translation
 ; TODO: add error checking
+; TODO: add function translation to TAC quads
+; TODO: add TAC quad append code to TAC_list at every quad generating step
 visit_node:
 push ebp
 mov ebp, esp 
-sub esp, 20
-
-push 16
-push itoa_buffer
-push dword [ebp + 28]
-call itoa
-add esp, 12
-push itoa_buffer
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-; push dword [ebp + 32]
-; call print_string
-; add esp, 4
-; push nl
-; call print_string
-; add esp, 4
-mov dword [ebp - 4], 0      ; address pointer for either inh or val
-mov dword [ebp - 8], 0      ; char* buffer
-mov dword [ebp - 12], 0     ; char* buffer
-mov dword [ebp - 16], 0     ; nested temp_counter
+sub esp, 32
+mov dword [ebp - 4], 0      ; char* buffer
+mov dword [ebp - 8], 0      ; quad* left_operand
+mov dword [ebp - 12], 0     ; quad* right_operand
+mov dword [ebp - 16], 0     ; entry*
 mov dword [ebp - 20], 0     ; node buffer
+mov dword [ebp - 24], 0     ; op buffer
+mov dword [ebp - 28], 0     ; params list
+mov dword [ebp - 32], 0     ; argument counter
 mov eax, dword [ebp + 8]    ; load node
 cmp dword [eax], St
 je .translate_statement
@@ -1476,6 +1509,7 @@ je .is_E_or_T
 cmp dword [eax], T
 jne .check_RE_or_RT
 .is_E_or_T:
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -1487,7 +1521,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax 
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]                ; load E
@@ -1505,6 +1539,7 @@ mov dword [edx], eax                    ; RE.inh = T.val
 mov eax, dword [ebp + 8]                ; load E
 lea eax, dword [eax + 12]               ; load children baddr
 mov eax, dword [eax + 4]                ; load RE
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -1513,7 +1548,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax 
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 ; modify the attributes later
@@ -1528,6 +1563,7 @@ mov edx, dword [eax + 8]                ; load child count
 mov eax, dword [eax + 12 + edx * 4 + 8] ; load RE.val addr
 mov edx, dword [ebp - 4]
 mov dword [edx], eax                    ; E.val = RE.val
+mov eax, 1
 jmp .exit
 .check_RE_or_RT:
 cmp dword [eax], RE
@@ -1543,6 +1579,7 @@ jne .check_F
 ; RE.val = RE.inh
 cmp dword [eax + 8], 0
 je .epsilon_prod
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -1554,65 +1591,68 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax 
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-push dword [ebp + 12]
-call get_new_temp
-add esp, 4
-mov dword [ebp - 8], eax   ; save new temp label
-mov eax, dword [ebp + 8]                    ; load RE | RT
-lea eax, dword [eax + 12]                   ; load children baddr
-mov eax, dword [eax + 8]                    ; load RE1 | RT1
-mov edx, dword [eax + 8]                    ; load child count
-lea eax, dword [eax + 12 + edx * 4 + 4]     ; load RE1.inh, RT1.inh
-mov edx, dword [ebp - 8]
-mov dword [eax], edx
-
-push dword [ebp - 8]
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push equals
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-mov eax, dword [ebp + 8]                    ; load RE | RT
-mov edx, dword [eax + 8]                    ; load child count
-mov eax, dword [eax + 12 + edx * 4 + 4]     ; load RE.inh
-push eax
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
 mov eax, dword [eax]
-mov dword [ebp - 8], eax
-lea eax, dword [ebp - 8]
-push eax 
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
+mov dword [ebp - 24], eax
+lea eax, dword [ebp - 24]
+mov dword [ebp - 4], eax 
+push dword [ebp + 20]
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 12], eax
+push dword [eax + 12]
+mov eax, dword [ebp + 8]                    ; load RE | RT
+mov edx, dword [eax + 8]                    ; load child count
+mov eax, dword [eax + 12 + edx * 4 + 4]     ; load RE.inh
+mov dword [ebp - 8], eax
+push dword [eax + 12]
+push ARITHMETIC_OP
+call check_if_valid_binary
+add esp, 16
+cmp eax, 0
+je .invalid_binary
 push eax
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-
+push dword [ebp - 12]
+push dword [ebp - 8]
+cmp dword [ebp - 24], '+'
+jne .minus
+push PLUS_OP
+jmp .end
+.minus:
+cmp dword [ebp - 24], '-'
+jne .mul
+push MINUS_OP
+jmp .end
+.mul:
+cmp dword [ebp - 24], '*'
+jne .div
+push MUL_OP
+jmp .end
+.div:
+push DIV_OP
+.end:
+call get_quad
+add esp, 16
+mov dword [ebp - 8], eax
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 4]
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -1624,7 +1664,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -1638,6 +1678,7 @@ mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]     ; get RE.val | RT.val
 mov edx, dword [ebp - 4]
 mov dword [eax], edx
+mov eax, 1
 jmp .exit
 .epsilon_prod:
 mov edx, dword [eax + 8]
@@ -1647,6 +1688,7 @@ mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 4]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
 .check_F:
 ; F -> id | -F | !F | *F | &F | ( E ) | Num | true | false
@@ -1657,28 +1699,30 @@ jne .unary_or_brackets
 mov edx, dword [eax + 12]
 cmp dword [edx], ID
 jne .not_id
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
 push dword [ebp + 20]
-mov eax, dword [eax + 12]                   ; load id
 push dword [ebp + 16]
 push dword [ebp + 12]
+mov eax, dword [eax + 12]                   ; load id
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
-lea eax, dword [eax + 12 + edx * 4 + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]     ; F.val addr
 mov dword [ebp - 4], eax
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
 mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]     ; id.val
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
 .id:
 ; id -> Na Rid
@@ -1687,45 +1731,27 @@ jmp .exit
 mov eax, dword [eax + 12]                   ; load Na
 mov eax, dword [eax + 4]                    ; get token
 mov eax, dword [eax + 4]                    ; get lexeme
-mov dword [ebp - 8], eax
+mov dword [ebp - 4], eax
 ; check if id is declared in function frame or gm
-push dword [ebp + 32]   ; func name
-push dword [ebp + 28]   ; func_table
-call hash_map_get
-add esp, 8
-push 16
-push itoa_buffer
-push dword [ebp + 32]
-call itoa
-add esp, 12
-push itoa_buffer
-call print_string
-add esp, 4
-mov eax, dword [eax + 8]    ; get func_entry var_table
-push dword [ebp - 8]
-push eax
-call hash_map_get
-add esp, 8
-cmp eax, 0                  ; variable not present in function frame
-jne .valid_variable
-.check_in_gm:
-push dword [ebp - 8]
+push dword [ebp + 28]
 push dword [ebp + 24]
-call hash_map_get
-add esp, 8
+push dword [ebp - 4]
+call get_var_decl
+add esp, 12
+mov dword [ebp - 16], eax
 cmp eax, 0
 jne .valid_variable
 .undeclared_variable:
 push var_undec
 call print_string
 add esp, 4
-push dword [ebp - 8]
+push dword [ebp - 4]
 call print_string
 add esp, 4
 push var_undec_func
 call print_string
 add esp, 4
-push dword [ebp + 32]
+push dword [ebp + 36]
 call print_string
 add esp, 4
 push single_quote_close
@@ -1733,17 +1759,26 @@ call print_string
 add esp, 4
 jmp .error_exit
 
-.valid_variable
+.valid_variable:
+mov eax, dword [ebp - 16]                   ; load var_entry
+push dword [eax + 4]                        ; type_entry
+push 0                                      ; right_operand
+push dword [ebp - 16]                       ; left_operand
+push ID                                     ; op
+call get_quad
+add esp, 16
+mov dword [ebp - 8], eax                    ; save quad
 mov eax, dword [ebp + 8]                    ; load id
 lea eax, dword [eax + 12]                   ; load children baddr
 mov eax, dword [eax + 4]                    ; load Rid
 mov edx, dword [eax + 8]                    ; load child count
 lea eax, dword [eax + 12 + edx * 4 + 4]     ; load Rid.inh addr
-mov edx, dword [ebp - 8]                    ; load Na.val
+mov edx, dword [ebp - 8]                    ; load quad
 mov dword [eax], edx                        ; Rid.inh = Na.val
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -1752,7 +1787,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -1766,6 +1801,7 @@ mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]     ; load Rid.val
 mov edx, dword [ebp - 4]
 mov dword [edx], eax                        ; id.val = Rid.val
+mov eax, 1
 jmp .exit
 
 .Rid:
@@ -1776,10 +1812,6 @@ jmp .exit
 ; eps -> Rid.val = Rid.inh
 cmp dword [eax + 8], 0
 je .empty_rid
-mov eax, dword [eax + 12]                   ; load idSel
-mov edx, dword [eax + 8]
-lea eax, dword [eax + 12 + edx * 4 + 4]     ; load idSel.inh addr
-mov dword [ebp - 4], eax
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 4]     ; load Rid.inh value
@@ -1792,6 +1824,7 @@ mov edx, dword [ebp - 4]
 mov dword [eax], edx                        ; idSel.inh = Rid.inh
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -1800,7 +1833,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -1818,6 +1851,7 @@ mov dword [edx], eax
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -1826,7 +1860,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -1840,6 +1874,7 @@ mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
 .empty_rid:
 mov edx, dword [eax + 8]
@@ -1848,6 +1883,7 @@ mov edx, eax
 sub edx, 4                                  ; get Rid.inh addr
 mov edx, dword [edx]                        ; load Rid.inh value
 mov dword [eax], edx                        ; Rid.val = Rid.inh
+mov eax, 1
 jmp .exit
 .idSel:
 ; idSel -> .Na | [GenE]
@@ -1857,64 +1893,126 @@ jmp .exit
 cmp dword [eax + 8], 3
 je .array_access
 .struct_access:
-push dword [ebp + 12]
-call get_new_temp
-add esp, 4
-mov dword [ebp - 8], eax
-push dword [ebp - 8]
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push equals
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-mov eax, dword [ebp + 8]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 4]
-push eax
-call print_string
-add esp, 4
-push left_bracket
-call print_string
-add esp, 4
-push offset_k
-call print_string
-add esp, 4
-push left_parenthesis
-call print_string
-add esp, 4
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
 mov eax, dword [eax + 4]
 mov eax, dword [eax + 4]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4] ; inherited quad
+mov dword [ebp - 8], eax
+mov eax, dword [eax + 4]    ; get var_entry
+mov eax, dword [eax + 4]    ; get type_entry
+cmp dword [eax + 4], STRUCTURE
+je .check_if_member_present
+.nonstruct_type:
+push var_nonstruct
+call print_string
+add esp, 4
+mov eax, dword [ebp - 8]    ; get left_operand quad
+mov eax, dword [eax + 4]    ; get Var_entry
+mov eax, dword [eax]        ; get key
 push eax
 call print_string
 add esp, 4
-push right_parenthesis
+push in_func_seg
 call print_string
 add esp, 4
-push right_bracket
+push dword [ebp + 36]
 call print_string
 add esp, 4
-push nl
+push single_quote_close
 call print_string
 add esp, 4
+jmp .error_exit
+.check_if_member_present:
+push dword [ebp - 4]        ; member Na lexeme
+mov eax, dword [ebp - 8]    ; quad
+mov eax, dword [eax + 4]    ; var_entry
+mov eax, dword [eax + 4]    ; type_entry
+mov eax, dword [eax + 8]    ; children var_table
+push eax
+call hash_map_get
+add esp, 4
+cmp eax, 0
+jne .valid_access
+.member_not_present:
+push struct_nonmember
+call print_string
+add esp, 4
+push dword [ebp - 4]
+call print_string
+add esp, 4
+push struct_nonmember_2
+call print_string
+add esp, 4
+mov eax, dword [ebp - 8]
+mov eax, dword [eax + 4]
+mov eax, dword [eax]
+push eax
+call print_string
+add esp, 4
+push in_func_seg
+call print_string
+add esp, 4
+push dword [ebp + 36]
+call print_string
+add esp, 4
+push single_quote_close
+call print_string
+add esp, 4
+jmp .error_exit
+.valid_access:
+; ebp - 8 | left_operand quad
+; eax | accessed member var
+mov dword [ebp - 12], eax
+mov eax, dword [eax + 4]    ; accessed variable type_entry
+push eax
+push 0
+push dword [ebp - 12]
+push ID
+call get_quad
+add esp, 16
+mov dword [ebp - 12], eax   ; save right_operand
+mov eax, dword [ebp - 12]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 4]
+push eax
+push dword [ebp - 12]
+push dword [ebp - 8]
+push ACCESS_OP
+call get_quad
+add esp, 16
+mov dword [ebp - 8], eax
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 8]
 mov dword [eax], edx
+mov eax, 1
 jmp .exit
+
 .array_access:
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4] ; inherited quad
+mov dword [ebp - 8], eax                ; save left_operand
+mov eax, dword [eax + 4]                ; get var_entry
+mov eax, dword [eax + 4]                ; get type_entry
+cmp dword [eax + 4], PRIMITIVE
+je .not_subscriptable
+cmp dword [eax + 4], STRUCTURE
+je .not_subscriptable
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -1923,98 +2021,117 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-push dword [ebp + 12]
-call get_new_temp
-add esp, 4
-mov dword [ebp - 8], eax
-push dword [ebp - 8]
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push equals
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-mov eax, dword [ebp + 8]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 4]
-mov dword [ebp - 4], eax
-push eax
-call print_string
-add esp, 4
-push left_bracket
-call print_string
-add esp, 4
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 12], eax
+mov eax, dword [eax + 12]   ; get right_operand type_entry
+cmp dword [eax + 4], PRIMITIVE
+jne .invalid_subscript_type
+.valid_subscript:
+mov eax, dword [ebp - 8]    ; left_operand
+mov eax, dword [eax + 12]   ; type_entry
+mov eax, dword [eax + 8]    ; child_type
 push eax
-call print_string
-add esp, 4
-push right_bracket
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+push dword [ebp - 12]
+push dword [ebp - 8]
+push ACCESS_OP
+call get_quad
+add esp, 16
+mov dword [ebp - 8], eax
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 8]
 mov dword [eax], edx
+mov eax, 1
 jmp .exit
+
+
+.not_subscriptable:
+push var_not_subscript
+call print_string
+add esp, 4
+mov eax, dword [ebp - 8]
+mov eax, dword [eax + 4]
+mov eax, dword [eax]
+push eax
+call print_string
+add esp, 4
+push in_func_seg
+call print_string
+add esp, 4
+push dword [ebp + 36]
+call print_string
+add esp, 4
+push single_quote_close
+call print_string
+add esp, 4
+jmp .error_exit
+
+.invalid_subscript_type:
+push var_subscript_type
+call print_string
+add esp, 4
+push dword [ebp + 36]
+call print_string
+add esp, 4
+push single_quote_close
+call print_string
+add esp, 4
+jmp .error_exit
 
 .not_id:
 cmp dword [edx], NUM
 jne .not_num
+push integer_k
+push dword [ebp + 20]
+call hash_map_get
+add esp, 8
+push eax
+push 0
+mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]   ; load Num
 mov eax, dword [eax + 4]    ; load token
 mov eax, dword [eax + 4]    ; load lexeme
-push 10
-push itoa_buffer
 push eax
-call itoa
-add esp, 12
-push 11
-call heap_alloc
-add esp, 4
+push NUM
+call get_quad
+add esp, 16
 mov dword [ebp - 8], eax
-mov edx, itoa_buffer
-.str_copy:
-cmp byte [edx], 0
-je .str_copy_end
-mov cl, byte [edx]
-mov byte [eax], cl
-inc eax
-inc edx
-jmp .str_copy
-.str_copy_end:
-mov byte [eax], 0
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 8]
 mov dword [eax], edx
+mov eax, 1
 jmp .exit
 .not_num:
+push 0
+push 0
 mov eax, dword [eax + 12]
+mov eax, dword [eax + 4]    ; token
 mov eax, dword [eax + 4]
-mov eax, dword [eax + 4]
+push eax
+push BOOL
+call get_quad
+add esp, 16
 mov dword [ebp - 8], eax
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 8]
 mov dword [eax], edx
+mov eax, 1
 jmp .exit
 .unary_or_brackets:
 cmp dword [eax + 8], 3
@@ -2022,6 +2139,7 @@ jne .unary
 .brackets:
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2030,7 +2148,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -2044,12 +2162,14 @@ mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
 
 .unary:
 mov eax, dword [ebp + 8]    ; load F
 lea eax, dword [eax + 12]   ; load children baddr
 mov eax, dword [eax + 4]    ; load F1
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2058,59 +2178,90 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax 
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-push dword [ebp + 12]
-call get_new_temp
-add esp, 4
-mov dword [ebp - 72], eax                   ; save new temp label
-mov eax, dword [ebp + 8]                    ; load F
-mov edx, dword [eax + 8]                    ; load child count
-lea eax, dword [eax + 12 + edx * 4 + 8]     ; load F.val addr
-mov edx, dword [ebp - 72]                   ; load new temp label
-mov dword [eax], edx                        ; save temp label
 
-push dword [ebp - 72]
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push equals
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-mov eax, dword [ebp + 8]
-mov eax, dword [eax + 12]
-mov eax, dword [eax]
-mov dword [ebp - 8], eax
-lea eax, dword [ebp - 8]
-push eax 
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
 mov eax, dword [ebp + 8]                    ; load F
 lea eax, dword [eax + 12]                   ; load children baddr
 mov eax, dword [eax + 4]                    ; load F1
 mov edx, dword [eax + 8]                    ; load child count
 mov eax, dword [eax + 12 + edx * 4 + 8]     ; load F1.val
+mov dword [ebp - 8], eax
+
+mov eax, dword [ebp + 8]    ; load F
+mov eax, dword [eax + 12]   ; load unary operator
+mov eax, dword [eax]
+mov dword [ebp - 4], eax
+cmp dword [ebp - 4], '-'
+jne .check_neg
+mov dword [ebp - 24], UNARY_MINUS_OP
+jmp .end_check
+.check_neg:
+cmp dword [ebp - 4], '!'
+jne .check_deref
+mov dword [ebp - 24], NEG_OP
+jmp .end_check
+.check_deref:
+cmp dword [ebp - 4], '*'
+jne .check_addr
+mov dword [ebp - 24], DEREF_OP
+jmp .end_check
+.check_addr:
+mov dword [ebp - 24], ADDRESS_OP
+jmp .end_check
+
+.end_check:
+push dword [ebp + 20]
+push dword [ebp - 8]
+push dword [ebp - 24]
+call check_if_valid_unary
+add esp, 12
+cmp eax, 0
+je .invalid_unary
+push eax
+push 0
+push dword [ebp - 8]
+push dword [ebp - 24]
+call get_quad
+add esp, 16
+mov dword [ebp - 8], eax
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+mov eax, 1
+jmp .exit
+
+.invalid_unary:
+push unary_error
+call print_string
+add esp, 4
+lea eax, dword [ebp - 4]
 push eax
 call print_string
 add esp, 4
-push nl
+push in_func_seg
 call print_string
 add esp, 4
-jmp .exit
+push dword [ebp + 36]
+call print_string
+add esp, 4
+push single_quote_close
+call print_string
+add esp, 4
+jmp .error_exit
 
 .translate_return_statement:
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2119,27 +2270,55 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-push return_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 8], eax    ; return quad
+push dword [ebp + 20]
+mov eax, dword [ebp - 8]
+mov eax, dword [eax + 12]
 push eax
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+push dword [ebp + 36]
+push dword [ebp + 32]
+call hash_map_get
+add esp, 8
+mov eax, dword [eax + 4]
+push eax
+push ASSIG_OP
+call check_if_valid_binary
+add esp, 16
+cmp eax, 0
+je .invalid_return_type
+mov eax, 1
+push eax
+push 0
+push dword [ebp - 8]
+push RETURN
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+mov eax, 1
 jmp .exit
+
+.invalid_return_type:
+push invalid_return
+call print_string
+add esp, 4
+push dword [ebp + 36]
+call print_string
+add esp, 4
+push single_quote_close
+call print_string
+add esp, 4
+jmp .error_exit
 
 .translate_statement:
 mov eax, dword [eax + 12]
@@ -2157,20 +2336,10 @@ lea eax, dword [eax + 12 + edx * 4 + 8]
 mov dword [eax], 0  ; clear GenE val
 jmp .func_call
 .assignment_st:
-push dword [ebp + 32]
-push dword [ebp + 28]
-push dword [ebp + 24]
-push dword [ebp + 20]
-push dword [ebp + 16]
-push dword [ebp + 12]
-push eax
-call visit_node
-add esp, 28
-cmp eax, 0
-je .error_exit
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2179,42 +2348,68 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
+push dword [ebp + 36]
+push dword [ebp + 32]
+push dword [ebp + 28]
+push dword [ebp + 24]
+push dword [ebp + 20]
+push dword [ebp + 16]
+push dword [ebp + 12]
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+push eax
+call visit_node
+add esp, 32
+cmp eax, 0
+je .error_exit
+; left_operand
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
-push eax
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push equals
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
+mov dword [ebp - 8], eax
+; right_operand
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 12], eax
+
+push dword [ebp + 20]
+mov eax, dword [ebp - 12]
+mov eax, dword [eax + 12]
 push eax
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+mov eax, dword [ebp - 8]
+mov eax, dword [eax + 12]
+push eax
+push ASSIG_OP
+call check_if_valid_binary
+add esp, 16
+mov dword [ebp - 4], equals
+cmp eax, 0
+je .invalid_binary
+push 0
+push dword [ebp - 12]
+push dword [ebp - 8]
+push ASSIG_OP
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+mov eax, 1
 jmp .exit
 
 .if_statement:
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2223,67 +2418,59 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-push if_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
+; if bool goto label_true
+; goto label_false
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
-push eax 
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push goto_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push dword [ebp + 16]
-call get_new_label
-add esp, 4
 mov dword [ebp - 8], eax
-push eax
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-push dword [ebp + 16]
+push dword [ebp + 12]
 call get_new_label
 add esp, 4
 mov dword [ebp - 12], eax
-push goto_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
+push 0
 push dword [ebp - 12]
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
 push dword [ebp - 8]
-call print_string
+push IF
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+push dword [ebp + 12]
+call get_new_label
 add esp, 4
-push colon_k
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+mov dword [ebp - 8], eax    
+mov eax, dword [ebp - 12]
+mov edx, dword [ebp - 8]
+mov dword [ebp - 8], eax    ; label_true
+mov dword [ebp - 12], edx   ; label_false
+push 0
+push 0
+push dword [ebp - 12]
+push GOTO
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+push 0
+push 0
+push dword [ebp - 8]   ; label_true
+push LABEL
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
 
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
@@ -2297,23 +2484,20 @@ lea edx, dword [eax + 12]
 mov edx, dword [edx + 4]    ; load StS
 mov dword [ebp - 20], edx   ; save next StS
 mov eax, dword [eax + 12]   ; load St
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
 push dword [ebp + 20]
 push dword [ebp + 16]
-lea edx, dword [ebp - 16]
-push edx
+push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-mov dword [ebp - 16], 0     ; zero out the counter
 jmp .statements_loop
 .end_statements_loop:
-
-mov dword [ebp - 16], 0     ; reset the counter
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 28]   ; load MatchedElse
@@ -2323,31 +2507,30 @@ je .no_else_part
 ; generate the else
 mov eax, dword [ebp - 12]
 mov dword [ebp - 8], eax    ; move second label to the first slot
-push dword [ebp + 16]
+push dword [ebp + 12]
 call get_new_label
 add esp, 4
 mov dword [ebp - 12], eax
-push goto_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
+push 0
+push 0
 push dword [ebp - 12]
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+push GOTO
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+push 0
+push 0
 push dword [ebp - 8]
-call print_string
-add esp, 4
-push colon_k
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+push LABEL
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
 mov eax, dword [ebp - 20]   ; load MatchedElse
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]    ; load StS
@@ -2360,57 +2543,61 @@ lea edx, dword [eax + 12]
 mov edx, dword [edx + 4]    ; load StS
 mov dword [ebp - 20], edx   ; save next StS
 mov eax, dword [eax + 12]   ; load St
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
 push dword [ebp + 20]
 push dword [ebp + 16]
-lea edx, dword [ebp - 16]
-push edx
+push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-mov dword [ebp - 16], 0     ; zero out the counter
 jmp .statements_loop_2
 .end_statements_loop_2:
+push 0
+push 0
 push dword [ebp - 12]
-call print_string
-add esp, 4
-push colon_k
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+push LABEL
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+mov eax, 1
 jmp .exit
 .no_else_part:
+push 0
+push 0
 push dword [ebp - 12]
-call print_string
-add esp, 4
-push colon_k
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+push LABEL
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+mov eax, 1
 jmp .exit
 
 .do_while_statement:
-push dword [ebp + 16]
+push dword [ebp + 12]
 call get_new_label
 add esp, 4
 mov dword [ebp - 8], eax
+push 0
+push 0
 push dword [ebp - 8]
-call print_string
-add esp, 4
-push colon_k
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+push LABEL
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]    ; load StS
@@ -2423,84 +2610,7 @@ lea edx, dword [eax + 12]
 mov edx, dword [edx + 4]    ; load StS
 mov dword [ebp - 20], edx   ; save next StS
 mov eax, dword [eax + 12]   ; load St
-push dword [ebp + 32]
-push dword [ebp + 28]
-push dword [ebp + 24]
-push dword [ebp + 20]
-push dword [ebp + 16]
-lea edx, dword [ebp - 16]
-push edx
-push eax
-call visit_node
-add esp, 28
-cmp eax, 0
-je .error_exit
-mov dword [ebp - 16], 0     ; zero out the counter
-jmp .statements_loop_3
-.end_statements_loop_3:
-mov eax, dword [ebp + 8]
-lea eax, dword [eax + 12]
-mov eax, dword [eax + 24]
-push dword [ebp + 32]
-push dword [ebp + 28]
-push dword [ebp + 24]
-push dword [ebp + 20]
-push dword [ebp + 16]
-lea edx, dword [ebp - 16]
-push edx
-push eax
-call visit_node
-add esp, 28
-cmp eax, 0
-je .error_exit
-push if_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-mov eax, dword [ebp + 8]
-lea eax, dword [eax + 12]
-mov eax, dword [eax + 24]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 8]
-push eax
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push goto_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push dword [ebp - 8]
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-jmp .exit
-
-.while_statement:
-push dword [ebp + 16]
-call get_new_label
-add esp, 4
-mov dword [ebp - 4], eax
-push eax
-call print_string
-add esp, 4
-push colon_k
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-mov eax, dword [ebp + 8]
-lea eax, dword [eax + 12]
-mov eax, dword [eax + 8]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2509,67 +2619,117 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-push if_k
-call print_string
+jmp .statements_loop_3
+.end_statements_loop_3:
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 24]
+push dword [ebp + 36]
+push dword [ebp + 32]
+push dword [ebp + 28]
+push dword [ebp + 24]
+push dword [ebp + 20]
+push dword [ebp + 16]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 32
+cmp eax, 0
+je .error_exit
+push 0
+push dword [ebp - 8]
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 24]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+push IF
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+mov eax, 1
+jmp .exit
+
+.while_statement:
+push dword [ebp + 12]
+call get_new_label
 add esp, 4
-push space
-call print_string
+mov dword [ebp - 8], eax
+push 0
+push 0
+push dword [ebp - 8]
+push LABEL
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+push dword [ebp + 36]
+push dword [ebp + 32]
+push dword [ebp + 28]
+push dword [ebp + 24]
+push dword [ebp + 20]
+push dword [ebp + 16]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 32
+cmp eax, 0
+je .error_exit
+push dword [ebp + 12]
+call get_new_label
 add esp, 4
+push 0
+mov dword [ebp - 12], eax
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 push eax
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push goto_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push dword [ebp + 16]
-call get_new_label
-add esp, 4
-mov dword [ebp - 8], eax
-push dword [ebp - 8]
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-push dword [ebp + 16]
-call get_new_label
-add esp, 4
-mov dword [ebp - 12], eax
-push goto_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
 push dword [ebp - 12]
-call print_string
+push IF
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+push dword [ebp + 12]
+call get_new_label
 add esp, 4
-push nl
-call print_string
-add esp, 4
+mov dword [ebp - 4], eax
+push 0
+push 0
+push dword [ebp - 4]
+push GOTO
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+push 0
+push 0
 push dword [ebp - 8]
-call print_string
-add esp, 4
-push colon_k
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+push LABEL
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 20]
@@ -2582,184 +2742,7 @@ lea edx, dword [eax + 12]
 mov edx, dword [edx + 4]    ; load StS
 mov dword [ebp - 20], edx   ; save next StS
 mov eax, dword [eax + 12]   ; load St
-push dword [ebp + 32]
-push dword [ebp + 28]
-push dword [ebp + 24]
-push dword [ebp + 20]
-push dword [ebp + 16]
-lea edx, dword [ebp - 16]
-push edx
-push eax
-call visit_node
-add esp, 28
-cmp eax, 0
-je .error_exit
-mov dword [ebp - 16], 0     ; zero out the counter
-jmp .statements_loop_4
-.end_statements_loop_4:
-push goto_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push dword [ebp - 4]
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-push dword [ebp - 12]
-call print_string
-add esp, 4
-push colon_k
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-jmp .exit
-
-.func_call:
-mov dword [ebp - 8], 0
-mov dword [ebp - 16], 0
-mov eax, dword [ebp + 8]
-lea eax, dword [eax + 12]
-mov eax, dword [eax + 8]    ; load ArgS
-; load first Arg 
-cmp dword [eax + 8], 0
-je .end_args_loop
-inc dword [ebp - 8]
-mov edx, dword [eax + 12]   ; load Arg
-mov edx, dword [edx + 12]   ; load GenE
-mov dword [ebp - 4], edx
-lea eax, dword [eax + 12]
-mov eax, dword [eax + 4]    ; load RArgs
-mov dword [ebp - 20], eax   ; save RArgs
-push dword [ebp + 32]
-push dword [ebp + 28]
-push dword [ebp + 24]
-push dword [ebp + 20]
-push dword [ebp + 16]
-lea eax, dword [ebp - 16]
-push eax
-push edx
-call visit_node
-add esp, 28
-cmp eax, 0
-je .error_exit
-push param_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-mov eax, dword [ebp - 4]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 8]
-push eax
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-mov dword [ebp - 16], 0
-.args_loop:
-mov eax, dword [ebp - 20]
-cmp dword [eax + 8], 0
-je .end_args_loop
-inc dword [ebp - 8]
-lea eax, dword [eax + 12]
-mov edx, dword [eax + 8]
-mov dword [ebp - 20], edx
-mov eax, dword [eax + 4]
-mov eax, dword [eax + 12]
-mov dword [ebp - 4], eax
-push dword [ebp + 32]
-push dword [ebp + 28]
-push dword [ebp + 24]
-push dword [ebp + 20]
-push dword [ebp + 16]
-lea edx, dword [ebp - 16]
-push edx
-push eax
-call visit_node
-add esp, 28
-cmp eax, 0
-je .error_exit
-push param_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-mov eax, dword [ebp - 4]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 8]
-push eax
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-mov dword [ebp - 16], 0
-jmp .args_loop
-.end_args_loop:
-mov eax, dword [ebp + 8]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 8]
-cmp eax, 0
-je .no_return
-push eax
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push equals
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-.no_return:
-push call_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-mov eax, dword [ebp + 8]
-mov eax, dword [eax + 12]
-mov eax, dword [eax + 4]
-mov eax, dword [eax + 4]
-push eax
-call print_string
-add esp, 4
-push comma_k
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push 10
-push itoa_buffer
-push dword [ebp - 8]
-call itoa
-add esp, 12
-push itoa_buffer
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
-jmp .exit
-
-.GenE:
-cmp dword [eax + 8], 1
-jne .pre_func_call
-.translate_expression:
-mov eax, dword [eax + 12]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2768,7 +2751,258 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
+cmp eax, 0
+je .error_exit
+jmp .statements_loop_4
+.end_statements_loop_4:
+push 0
+push 0
+push dword [ebp - 8]
+push GOTO
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+push 0
+push 0
+push dword [ebp - 4]
+push LABEL
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+mov eax, 1
+jmp .exit
+
+.func_call:
+; load params list
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 4]
+push eax
+push dword [ebp + 32]
+call hash_map_get
+add esp, 8
+mov eax, dword [eax + 12]
+mov dword [ebp - 28], eax   ; load list
+mov dword [ebp - 32], 0     ; zero out the counter
+; start translating arguments
+mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]    ; load ArgS
+; load first Arg 
+cmp dword [eax + 8], 0
+je .end_args_loop
+inc dword [ebp - 32]
+mov edx, dword [eax + 12]   ; load Arg
+mov edx, dword [edx + 12]   ; load GenE
+mov dword [ebp - 4], edx
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]    ; load RArgs
+mov dword [ebp - 20], eax   ; save RArgs
+push dword [ebp + 36]
+push dword [ebp + 32]
+push dword [ebp + 28]
+push dword [ebp + 24]
+push dword [ebp + 20]
+push dword [ebp + 16]
+push dword [ebp + 12]
+push edx
+call visit_node
+add esp, 32
+cmp eax, 0
+je .error_exit
+cmp dword [ebp - 28], 0
+je .invalid_argument_amount
+push dword [ebp + 20]
+mov eax, dword [ebp - 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8] ; load GenE.val quad
+mov eax, dword [eax + 12]
+push eax
+mov eax, dword [ebp - 28]   ; load params list
+mov eax, dword [eax]        ; load var_entry
+mov eax, dword [eax + 4]    ; load type_entry
+push eax
+push ASSIG_OP
+call check_if_valid_binary
+add esp, 16
+cmp eax, 0
+je .invalid_param_type
+push eax
+push 0
+mov eax, dword [ebp - 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+push PARAM
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+; move param list pointer
+mov eax, dword [ebp - 28]
+mov eax, dword [eax + 4]
+mov dword [ebp - 28], eax
+.args_loop:
+mov eax, dword [ebp - 20]
+cmp dword [eax + 8], 0
+je .end_args_loop
+inc dword [ebp - 32]
+lea eax, dword [eax + 12]
+mov edx, dword [eax + 8]
+mov dword [ebp - 20], edx
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 12]
+mov dword [ebp - 4], eax
+push dword [ebp + 36]
+push dword [ebp + 32]
+push dword [ebp + 28]
+push dword [ebp + 24]
+push dword [ebp + 20]
+push dword [ebp + 16]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 32
+cmp eax, 0
+je .error_exit
+cmp dword [ebp - 28], 0
+je .invalid_argument_amount
+push dword [ebp + 20]
+mov eax, dword [ebp - 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8] ; load GenE.val quad
+mov eax, dword [eax + 12]
+push eax
+mov eax, dword [ebp - 28]   ; load params list
+mov eax, dword [eax]        ; load var_entry
+mov eax, dword [eax + 4]    ; load type_entry
+push eax
+push ASSIG_OP
+call check_if_valid_binary
+add esp, 16
+cmp eax, 0
+je .invalid_param_type
+push eax
+push 0
+mov eax, dword [ebp - 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]
+push eax
+push PARAM
+call get_quad
+add esp, 16
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+jmp .args_loop
+.end_args_loop:
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 4]
+push eax
+push dword [ebp + 32]
+call hash_map_get
+add esp, 8
+mov edx, dword [eax + 4]
+push edx
+push dword [ebp - 32]
+push eax
+push CALL 
+call get_quad
+add esp, 16
+mov dword [ebp - 8], eax
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+push dword [ebp - 8]
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+mov eax, 1
+jmp .exit
+
+.invalid_param_type:
+push func_call_wrong_type
+call print_string
+add esp, 4
+mov eax, dword [ebp - 28]
+mov eax, dword [eax]
+mov eax, dword [eax]
+push eax
+call print_string
+add esp, 4
+push func_call_wrong_type_param
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 4]
+push eax
+call print_string
+add esp, 4
+push in_func_seg
+call print_string
+add esp, 4
+push dword [ebp + 36]
+call print_string
+add esp, 4
+push single_quote_close
+call print_string
+add esp, 4
+jmp .error_exit
+
+.invalid_argument_amount:
+push func_call_argument_amount
+call print_string
+add esp, 4
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 4]
+push eax
+call print_string
+add esp, 4
+push in_func_seg
+call print_string
+add esp, 4
+push dword [ebp + 36]
+call print_string
+add esp, 4
+push single_quote_close
+call print_string
+add esp, 4
+jmp .error_exit
+
+.GenE:
+cmp dword [eax + 8], 1
+jne .func_call
+.translate_expression:
+mov eax, dword [eax + 12]
+push dword [ebp + 36]
+push dword [ebp + 32]
+push dword [ebp + 28]
+push dword [ebp + 24]
+push dword [ebp + 20]
+push dword [ebp + 16]
+push dword [ebp + 12]
+push eax
+call visit_node
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -2781,25 +3015,27 @@ mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
 
-.pre_func_call:
-push dword [ebp + 12]
-call get_new_temp
-add esp, 4
-mov dword [ebp - 8], eax
-mov eax, dword [ebp + 8]
-mov edx, dword [eax + 8]
-lea eax, dword [eax + 12 + edx * 4 + 8]
-mov edx, dword [ebp - 8]
-mov dword [eax], edx
-jmp .func_call
+; .pre_func_call:
+; push dword [ebp + 12]
+; call get_new_temp
+; add esp, 4
+; mov dword [ebp - 8], eax
+; mov eax, dword [ebp + 8]
+; mov edx, dword [eax + 8]
+; lea eax, dword [eax + 12 + edx * 4 + 8]
+; mov edx, dword [ebp - 8]
+; mov dword [eax], edx
+; jmp .func_call
 
 .JointE:
 ; JointE -> RelE Union
 ; Union.inh = RelE.val
 ; JointE.val = Union.val
 mov eax, dword [eax + 12]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2808,7 +3044,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -2826,6 +3062,7 @@ mov dword [edx], eax
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2834,7 +3071,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -2848,6 +3085,7 @@ mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
 
 .RelE:
@@ -2855,6 +3093,7 @@ jmp .exit
 ; RRelE.inh = E.val
 ; RelE.val = RRelE.val
 mov eax, dword [eax + 12]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2863,7 +3102,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -2881,6 +3120,7 @@ mov dword [edx], eax
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2889,7 +3129,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -2903,6 +3143,7 @@ mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
 
 
@@ -2917,6 +3158,7 @@ cmp dword [eax + 8], 0
 je .empty_rrele
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2925,56 +3167,42 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-push dword [ebp + 12]
-call get_new_temp
-add esp, 4
-mov dword [ebp - 8], eax
-push eax
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push equals
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-mov eax, dword [ebp + 8]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 4]
-push eax
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-mov eax, dword [ebp + 8]
-mov eax, dword [eax + 12]
-mov eax, dword [eax + 12]
-mov eax, dword [eax + 4]
-mov eax, dword [eax + 4]
-push eax
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
+push dword [ebp + 20]
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 12], eax
+push dword [eax + 12]
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4]
+mov dword [ebp - 8], eax
+push dword [eax + 12]
+push LOGIC_OP
+call check_if_valid_binary
+add esp, 16
+cmp eax, 0
+je .invalid_binary
 push eax
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+push dword [ebp - 12]
+push dword [ebp - 8]
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 12]
+mov eax, dword [eax]
+push eax
+call get_quad
+add esp, 16
+mov dword [ebp - 8], eax
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
@@ -2985,6 +3213,7 @@ mov dword [eax], edx
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -2993,7 +3222,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -3007,6 +3236,7 @@ mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
 
 .empty_rrele:
@@ -3018,6 +3248,7 @@ sub eax, 4
 mov eax, dword [eax]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
 
 
@@ -3041,6 +3272,7 @@ mov edx, dword [ebp - 4]
 mov dword [eax], edx
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -3049,7 +3281,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -3067,6 +3299,7 @@ mov dword [eax], edx
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -3075,7 +3308,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -3088,7 +3321,8 @@ mov eax, dword [eax + 4]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 4]
-mov dword [edx], eax 
+mov dword [edx], eax
+mov eax, 1 
 jmp .exit
 
 .empty_union:
@@ -3100,6 +3334,7 @@ sub eax, 4
 mov eax, dword [eax]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
 
 
@@ -3115,6 +3350,7 @@ cmp dword [eax + 8], 0
 je .empty_uniont
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -3123,7 +3359,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -3142,6 +3378,7 @@ mov dword [eax], edx
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -3150,51 +3387,39 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-push dword [ebp + 12]
-call get_new_temp
-add esp, 4
-mov dword [ebp - 8], eax
-push dword [ebp - 8]
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push equals
-call print_string
-add esp, 4
-push space 
-call print_string
-add esp, 4
-mov eax, dword [ebp + 8]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 4]
-push eax
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push or_op
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
+push dword [ebp + 20]
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 8]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 12], eax
+push dword [eax + 12]
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4]
+mov dword [ebp - 8], eax
+push dword [eax + 12]
+push LOGIC_OP
+call check_if_valid_binary
+add esp, 16
+mov dword [ebp - 4], or_op
+cmp eax, 0
+je .invalid_binary
 push eax
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+push dword [ebp - 12]
+push dword [ebp - 8]
+push OR_OP
+call get_quad
+add esp, 16
+mov dword [ebp - 8], eax
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 12]
@@ -3205,6 +3430,7 @@ mov dword [eax], edx
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 12]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -3213,7 +3439,7 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
@@ -3227,6 +3453,7 @@ mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
 
 .empty_uniont:
@@ -3237,6 +3464,7 @@ sub eax, 4
 mov eax, dword [eax]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
 
 
@@ -3250,6 +3478,7 @@ cmp dword [eax + 8], 0
 je .empty_intersect
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
+push dword [ebp + 36]
 push dword [ebp + 32]
 push dword [ebp + 28]
 push dword [ebp + 24]
@@ -3258,56 +3487,45 @@ push dword [ebp + 16]
 push dword [ebp + 12]
 push eax
 call visit_node
-add esp, 28
+add esp, 32
 cmp eax, 0
 je .error_exit
-push dword [ebp + 12]
-call get_new_temp
-add esp, 4
-mov dword [ebp - 8], eax
-push dword [ebp - 8]
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push equals
-call print_string
-add esp, 4
-push space 
-call print_string
-add esp, 4
-mov eax, dword [ebp + 8]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 4]
-push eax
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
-push and_op
-call print_string
-add esp, 4
-push space
-call print_string
-add esp, 4
+push dword [ebp + 20]
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
+mov dword [ebp - 12], eax
+push dword [eax + 12]
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 4]
+mov dword [ebp - 8], eax
+push dword [eax + 12]
+push LOGIC_OP
+call check_if_valid_binary
+add esp, 16
+mov dword [ebp - 4], and_op
+cmp eax, 0
+je .invalid_binary
 push eax
-call print_string
-add esp, 4
-push nl
-call print_string
-add esp, 4
+push dword [ebp - 12]
+push dword [ebp - 8]
+push AND_OP
+call get_quad
+add esp, 16
+mov dword [ebp - 8], eax
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 8]
 mov dword [eax], edx
+mov eax, 1
 jmp .exit
 
 .empty_intersect:
@@ -3318,7 +3536,26 @@ sub eax, 4
 mov eax, dword [eax]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
+mov eax, 1
 jmp .exit
+
+.invalid_binary:
+push binary_error
+call print_string
+add esp, 4
+push dword [ebp - 4]
+call print_string
+add esp, 4
+push in_func_seg
+call print_string
+add esp, 4
+push dword [ebp + 36]
+call print_string
+add esp, 4
+push single_quote_close
+call print_string
+add esp, 4
+jmp .error_exit
 
 .error_exit:
 xor eax, eax 
@@ -3404,10 +3641,275 @@ mov eax, dword [ebp - 4]
 leave
 ret
 
+; VarEntry* get_var_decl(char* var_name, table* var_table, table* func_var_table)
+get_var_decl:
+push ebp
+mov ebp, esp 
+push dword [ebp + 8]
+push dword [ebp + 16]
+call hash_map_get
+add esp, 8
+cmp eax, 0
+jne .exit
+push dword [ebp + 8]
+push dword [ebp + 12]
+call hash_map_get
+add esp, 8
+cmp eax, 0
+jne .exit
+.error_exit:
+xor eax, eax
+.exit:
+leave
+ret
 
 ; STRUCTURE: quad <int op, int arg1, int arg2, int arg3> 
-; quad* get_quad(int op, int arg1, int arg2, int arg3)
+; quad* get_quad(int op, auto left_operand, auto right_operand, entry* type)
 get_quad:
+push ebp
+mov ebp, esp 
+sub esp, 4
+push 16
+call heap_alloc
+add esp, 4
+mov dword [ebp - 4], eax
+mov edx, dword [ebp + 8]
+mov dword [eax], edx
+mov edx, dword [ebp + 12]
+mov dword [eax + 4], edx
+mov edx, dword [ebp + 16]
+mov dword [eax + 8], edx
+mov edx, dword [ebp + 20]
+mov dword [eax + 12], edx
+leave
+ret
+
+; entry* check_if_valid_unary(int op, quad operand, table* type_table)
+; returns the new type of the subsequent operation or null if invalid operand types are present
+check_if_valid_unary:
+push ebp
+mov ebp, esp 
+cmp dword [ebp + 8], UNARY_MINUS_OP
+je .unary_minus
+cmp dword [ebp + 8], NEG_OP
+je .neg
+cmp dword [ebp + 8], DEREF_OP
+je .deref
+cmp dword [ebp + 8], ADDRESS_OP
+je .address
+jmp .next
+.unary_minus:
+mov eax, dword [ebp + 12]       ; load left_operand
+mov eax, dword [eax + 12]       ; load type_entry
+cmp dword [eax + 4], PRIMITIVE  ; unary minus only valid for primitive types (int, uint, char, bool)
+jne .false
+cmp dword [eax + 8], UINTEGER
+je .true
+push integer_k
+push dword [ebp + 16]
+call hash_map_get
+add esp, 8
+jmp .true
+.deref:
+mov eax, dword [ebp + 12]
+mov eax, dword [eax + 12]
+cmp dword [eax + 4], PRIMITIVE
+je .false
+cmp dword [eax + 4], STRUCTURE
+je .false
+mov eax, dword [eax + 8]    ; load child type
+jmp .true
+.address:
+mov eax, dword [ebp + 12]
+cmp dword [eax], ID         ; & op only valid for lvalues
+je .valid
+cmp dword [eax], ACCESS_OP  ; access produces an lvalue
+jne .false
+.valid:
+mov eax, dword [eax + 12]
+push eax
+push pointer
+call get_composite_p_entry
+add esp, 8
+jmp .true
+.next:
+.neg:
+push bool_k
+push dword [ebp + 16]
+call hash_map_get
+add esp, 8
+.true:
+leave
+ret
+
+.false:
+xor eax, eax
+leave
+ret
+
+; entry* check_if_valid_binary(int op_type, entry* left_operand_type, entry* right_operant_type, table* type_table)
+; returns the subsequent type after valid operation or null if invalid types are provided
+check_if_valid_binary:
+push ebp
+mov ebp, esp
+mov eax, dword [ebp + 12]
+push dword [eax]
+call print_string
+add esp, 4
+push space
+call print_string
+add esp, 4
+mov eax, dword [ebp + 16]
+push dword [eax]
+call print_string
+add esp, 4
+push nl
+call print_string
+add esp, 4
+cmp dword [ebp + 8], ARITHMETIC_OP
+je .arithmetic
+cmp dword [ebp + 8], LOGIC_OP
+je .logical
+jmp .assignment
+.arithmetic:
+; check for primitive arithmetic
+mov eax, dword [ebp + 12]
+mov edx, dword [ebp + 16]
+mov eax, dword [eax + 4]
+add eax, dword [edx + 4]
+cmp eax, 0
+je .primitive_arithmetic
+cmp eax, 1
+je .pointer_arithmetic
+jmp .error_exit
+.primitive_arithmetic:
+mov eax, dword [ebp + 12]
+cmp dword [eax + 8], UINTEGER
+je .exit
+mov eax, dword [ebp + 16]
+cmp dword [eax + 8], UINTEGER
+je .exit
+push integer_k
+push dword [ebp + 20]
+call hash_map_get
+add esp, 8
+jmp .exit
+.pointer_arithmetic:
+mov eax, dword [ebp + 12]
+cmp dword [eax + 4], POINTER
+je .exit
+mov eax, dword [ebp + 16]
+jmp .exit
+.logical:
+mov eax, dword [ebp + 12]
+cmp dword [eax + 4], STRUCTURE
+je .error_exit
+mov eax, dword [ebp + 16]
+cmp dword [eax + 4], STRUCTURE
+je .error_exit
+push bool_k
+push dword [ebp + 20]
+call hash_map_get
+add esp, 8
+jmp .exit
+.assignment:
+mov eax, dword [ebp + 12]
+mov edx, dword [ebp + 16]
+mov eax, dword [eax + 4]
+mov edx, dword [edx + 4]
+cmp eax, edx
+je .equal_complexity
+.mixed_complexity:
+mov eax, dword [ebp + 12]
+cmp dword [eax + 4], PRIMITIVE
+je .error_exit
+cmp dword [eax + 4], STRUCTURE
+je .error_exit
+mov eax, dword [ebp + 16]
+cmp dword [eax + 4], PRIMITIVE
+je .error_exit
+cmp dword [eax + 4], STRUCTURE
+je .error_exit
+.equal_complexity:
+mov eax, dword [ebp + 12]
+cmp dword [eax + 4], STRUCTURE
+je .structs
+cmp dword [eax + 4], POINTER
+je .pointer_loop
+cmp dword [eax + 4], ARRAY
+jne .primitives
+.pointer_loop:
+mov eax, dword [ebp + 12]
+mov eax, dword [eax + 8]
+mov dword [ebp + 12], eax
+mov eax, dword [ebp + 16]
+mov eax, dword [eax + 8]
+mov dword [ebp + 16], eax
+push dword [ebp + 16]
+push dword [ebp + 12]
+call can_follow_pointer
+add esp, 8
+cmp eax, 0
+jne .pointer_loop
+.end_pointer_loop:
+mov eax, dword [ebp + 12]
+mov edx, dword [ebp + 16]
+mov eax, dword [eax + 4]
+cmp eax, dword [edx + 4]
+jne .error_exit
+mov eax, dword [ebp + 12]
+cmp dword [eax + 4], PRIMITIVE
+jne .structs
+mov edx, dword [edx + 8]
+cmp dword [eax + 8], edx
+jne .error_exit
+mov eax, dword [ebp + 12]
+jmp .exit
+.structs:
+mov eax, dword [eax]
+push eax
+mov eax, dword [ebp + 16]
+mov eax, dword [eax]
+push eax
+call string_equals
+add esp, 8
+cmp eax, 0
+je .error_exit
+mov eax, dword [ebp + 12]
+jmp .exit
+.primitives:
+mov eax, dword [ebp + 12]
+jmp .exit
+
+.error_exit:
+xor eax, eax
+.exit:
+leave
+ret
+
+; bool can_follow_pointer(entry* left_operand_type, entry* right_operand_type)
+can_follow_pointer:
+push ebp
+mov ebp, esp
+mov eax, dword [ebp + 8]
+cmp dword [eax + 4], POINTER
+je .skip_to_right
+cmp dword [eax + 4], ARRAY
+jne .error_exit
+.skip_to_right:
+mov eax, dword [ebp + 12]
+cmp dword [eax + 4], POINTER
+je .exit
+cmp dword [eax + 4], ARRAY
+je .exit
+.error_exit:
+xor eax, eax
+leave
+ret
+.exit:
+mov eax, 1
+leave
+ret
 
 struct_self_ref: db "ERROR: semantic error, incomplete type for variable '", 0
 struct_self_ref_end: db "' in struct '", 0
@@ -3417,12 +3919,24 @@ var_red_func: db "' redeclared in function '", 0
 var_red_struct: db "' redeclared in struct '", 0
 var_undec: db "ERROR: semantic error, undeclared variable '", 0
 var_undec_func: db "' detected in function '", 0
+var_nonstruct: db "ERROR: semantic error, member access requested on nonstruct variable '", 0
+in_func_seg: db "' in function '", 0
+struct_nonmember: db "ERROR: semantic error, member '", 0
+struct_nonmember_2: db "' not present in struct '", 0
+unary_error: db "ERROR: semantic error, invalid type supplied to unary operator '", 0
+binary_error: db "ERROR: semantic error, incompatible types supplied to operator '", 0
+var_not_subscript: db "ERROR: semantic error, subscript access requested on not subscriptable variable '", 0
+var_subscript_type: db "ERROR: semantic error, subscript value not integer type in function '", 0
+invalid_return: db "ERROR: semantic error, returning invalid type in function '", 0
+func_call_wrong_type: db "ERROR: semantic error, type mismatch for parameter '", 0
+func_call_wrong_type_param: db "' for function call '", 0
+func_call_argument_amount: db "ERROR: semantic error, excess amount of arguments passed to function call '", 0
 single_quote_close: db "'.", 10, 0
 param_red: db "ERROR: semantic error, parameter '", 0
 func_red: db "ERROR: semantic error, function '", 0
 func_red_end: db "' redeclared.", 10, 0
 func_arr_ret: db "' declared with an array type return value.", 10, 0
-func_main_missing: db "ERROR: semantic error, parameterless function main not declared"
+func_main_missing: db "ERROR: semantic error, parameterless function main not declared", 0
 is_primitive: db "primitive type ref", 0
 is_simple: db "simple type registered", 0
 is_composite: db "composite type registered", 0
