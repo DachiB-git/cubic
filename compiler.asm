@@ -81,6 +81,7 @@
 %include "lexer.asm"
 %include "parser.asm"
 %include "analyzer.asm"
+%include "generator.asm"
 
 ; VARIABLES
 ; buffer_ptr - [ebp - 4]
@@ -277,6 +278,13 @@ call analyzer
 add esp, 16
 cmp eax, 0                  ; semantic error detected
 je .exit
+
+; start code_gen
+push dword [ebp - 64]
+push dword [ebp - 60]
+push dword [ebp - 48]
+call generator
+add esp, 12
 
 .exit:
 leave 

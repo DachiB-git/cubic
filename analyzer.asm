@@ -2116,11 +2116,16 @@ mov dword [eax], edx
 mov eax, 1
 jmp .exit
 .not_num:
+push bool_k
+push dword [ebp + 20]
+call hash_map_get
+add esp, 8
+push eax
 push 0
-push 0
+mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
-mov eax, dword [eax + 4]    ; token
 mov eax, dword [eax + 4]
+mov eax, dword [eax]
 push eax
 push BOOL
 call get_quad

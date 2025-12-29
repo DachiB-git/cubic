@@ -1,17 +1,17 @@
-func int add(int a, int b)
+typedef struct LL
 {
-    return a + b;
-}
+    char c;
+    LL* next;
+};
+
+int x;
+int[2] pair;
+LL gm_list;
 
 func int main()
 {
     int x;
-    char* p;
-    if (x == 10)
-    {
-        x = add(x, x);
-    }
-    x = x + 20;
-    p = &x;
-    return x;
+    LL list;
+    char c;
+    return true;
 }
