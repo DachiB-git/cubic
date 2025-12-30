@@ -451,7 +451,6 @@ ret
 string_copy:
 push ebp
 mov ebp, esp
-sub esp, 12
 push edi
 push esi
 mov esi, dword [ebp + 12]
@@ -459,7 +458,7 @@ mov edi, dword [ebp + 8]
 .loop:
 cmp byte [esi], 0
 je .exit
-stosb
+movsb
 jmp .loop
 .exit:
 mov byte [edi], 0   ; add null terminator
