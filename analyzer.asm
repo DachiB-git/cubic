@@ -5,8 +5,10 @@
 %define ARRAY 2
 %define STRUCTURE 3
 
-%define ARITHMETIC_OP 1
-%define LOGIC_OP 2
+
+%define ARITHMETIC_ADD_SUB_OP 1
+%define ARITHMETIC_MUL_DIV_OP 2
+%define LOGIC_OP 3
 
 %define START -1
 %define ASSIG_OP 0
@@ -1607,13 +1609,21 @@ mov eax, dword [eax + 4]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov dword [ebp - 12], eax
-push dword [eax + 12]
+push eax
 mov eax, dword [ebp + 8]                    ; load RE | RT
 mov edx, dword [eax + 8]                    ; load child count
 mov eax, dword [eax + 12 + edx * 4 + 4]     ; load RE.inh
 mov dword [ebp - 8], eax
-push dword [eax + 12]
-push ARITHMETIC_OP
+push eax
+mov eax, dword [ebp + 8]
+cmp dword [eax], RE
+jne .mul_div
+.add_sub:
+push ARITHMETIC_ADD_SUB_OP
+jmp .end_op_check
+.mul_div:
+push ARITHMETIC_MUL_DIV_OP
+.end_op_check: 
 call check_if_valid_binary
 add esp, 16
 cmp eax, 0
@@ -2284,28 +2294,31 @@ mov eax, dword [eax + 4]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov dword [ebp - 8], eax    ; return quad
-push dword [ebp + 20]
-mov eax, dword [ebp - 8]
-mov eax, dword [eax + 12]
-push eax
 push dword [ebp + 36]
 push dword [ebp + 32]
 call hash_map_get
 add esp, 8
 mov eax, dword [eax + 4]
 push eax
+push 0
+push 0
+push RETURN
+call get_quad
+add esp, 16
+mov dword [ebp - 16], eax
+push dword [ebp + 20]
+push dword [ebp - 8]
+push dword [ebp - 16]
+push eax
 push ASSIG_OP
 call check_if_valid_binary
 add esp, 16
 cmp eax, 0
 je .invalid_return_type
-push eax
-push 0
-push dword [ebp - 8]
-push RETURN
-call get_quad
-add esp, 16
-push eax
+mov eax, dword [ebp - 16]
+mov edx, dword [ebp - 8]
+mov dword [eax + 4], edx
+push dword [ebp - 16]
 push dword [ebp + 16]
 call linked_list_append
 add esp, 8
@@ -2385,10 +2398,8 @@ mov dword [ebp - 12], eax
 
 push dword [ebp + 20]
 mov eax, dword [ebp - 12]
-mov eax, dword [eax + 12]
 push eax
 mov eax, dword [ebp - 8]
-mov eax, dword [eax + 12]
 push eax
 push ASSIG_OP
 call check_if_valid_binary
@@ -2803,6 +2814,8 @@ mov eax, dword [eax + 8]    ; load ArgS
 ; load first Arg 
 cmp dword [eax + 8], 0
 je .end_args_loop
+cmp dword [ebp - 28], 0
+je .invalid_argument_amount_more
 inc dword [ebp - 32]
 mov edx, dword [eax + 12]   ; load Arg
 mov edx, dword [edx + 12]   ; load GenE
@@ -2822,33 +2835,32 @@ call visit_node
 add esp, 32
 cmp eax, 0
 je .error_exit
-cmp dword [ebp - 28], 0
-je .invalid_argument_amount
-push dword [ebp + 20]
-mov eax, dword [ebp - 4]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 8] ; load GenE.val quad
-mov eax, dword [eax + 12]
-push eax
 mov eax, dword [ebp - 28]   ; load params list
 mov eax, dword [eax]        ; load var_entry
 mov eax, dword [eax + 4]    ; load type_entry
 push eax
+push 0
+push 0
+push PARAM
+call get_quad
+add esp, 16
+mov dword [ebp - 16], eax
+mov eax, dword [ebp - 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8] ; load GenE.val quad
+mov dword [ebp - 8], eax
+push dword [ebp + 20]
+push dword [ebp - 8]
+push dword [ebp - 16]
 push ASSIG_OP
 call check_if_valid_binary
 add esp, 16
 cmp eax, 0
 je .invalid_param_type
-push eax
-push 0
-mov eax, dword [ebp - 4]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 8]
-push eax
-push PARAM
-call get_quad
-add esp, 16
-push eax
+mov eax, dword [ebp - 16]
+mov edx, dword [ebp - 8]
+mov dword [eax + 4], edx
+push dword [ebp - 16]
 push dword [ebp + 16]
 call linked_list_append
 add esp, 8
@@ -2860,6 +2872,8 @@ mov dword [ebp - 28], eax
 mov eax, dword [ebp - 20]
 cmp dword [eax + 8], 0
 je .end_args_loop
+cmp dword [ebp - 28], 0
+je .invalid_argument_amount_more
 inc dword [ebp - 32]
 lea eax, dword [eax + 12]
 mov edx, dword [eax + 8]
@@ -2879,38 +2893,43 @@ call visit_node
 add esp, 32
 cmp eax, 0
 je .error_exit
-cmp dword [ebp - 28], 0
-je .invalid_argument_amount
-push dword [ebp + 20]
-mov eax, dword [ebp - 4]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 8] ; load GenE.val quad
-mov eax, dword [eax + 12]
-push eax
 mov eax, dword [ebp - 28]   ; load params list
 mov eax, dword [eax]        ; load var_entry
 mov eax, dword [eax + 4]    ; load type_entry
 push eax
+push 0
+push 0
+push PARAM
+call get_quad
+add esp, 16
+mov dword [ebp - 16], eax
+mov eax, dword [ebp - 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8] ; load GenE.val quad
+mov dword [ebp - 8], eax
+push dword [ebp + 20]
+push dword [ebp - 8]
+push dword [ebp - 16]
 push ASSIG_OP
 call check_if_valid_binary
 add esp, 16
 cmp eax, 0
 je .invalid_param_type
-push eax
-push 0
-mov eax, dword [ebp - 4]
-mov edx, dword [eax + 8]
-mov eax, dword [eax + 12 + edx * 4 + 8]
-push eax
-push PARAM
-call get_quad
-add esp, 16
-push eax
+mov eax, dword [ebp - 16]
+mov edx, dword [ebp - 8]
+mov dword [eax + 4], edx
+push dword [ebp - 16]
 push dword [ebp + 16]
 call linked_list_append
 add esp, 8
+; move param list pointer
+mov eax, dword [ebp - 28]
+mov eax, dword [eax + 4]
+mov dword [ebp - 28], eax
 jmp .args_loop
 .end_args_loop:
+cmp dword [ebp - 28], 0
+jne .invalid_argument_amount_less
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
 mov eax, dword [eax + 4]
@@ -2970,8 +2989,12 @@ call print_string
 add esp, 4
 jmp .error_exit
 
-.invalid_argument_amount:
-push func_call_argument_amount
+.invalid_argument_amount_less:
+push func_call_argument_amount_less
+jmp .invalid_argument
+.invalid_argument_amount_more:
+push func_call_argument_amount_more
+.invalid_argument:
 call print_string
 add esp, 4
 mov eax, dword [ebp + 8]
@@ -3181,12 +3204,10 @@ mov eax, dword [eax + 4]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov dword [ebp - 12], eax
-push dword [eax + 12]
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 4]
 mov dword [ebp - 8], eax
-push dword [eax + 12]
 push LOGIC_OP
 call check_if_valid_binary
 add esp, 16
@@ -3401,12 +3422,10 @@ mov eax, dword [eax + 8]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov dword [ebp - 12], eax
-push dword [eax + 12]
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 4]
 mov dword [ebp - 8], eax
-push dword [eax + 12]
 push LOGIC_OP
 call check_if_valid_binary
 add esp, 16
@@ -3501,12 +3520,10 @@ mov eax, dword [eax + 4]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov dword [ebp - 12], eax
-push dword [eax + 12]
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 4]
 mov dword [ebp - 8], eax
-push dword [eax + 12]
 push LOGIC_OP
 call check_if_valid_binary
 add esp, 16
@@ -3751,32 +3768,44 @@ xor eax, eax
 leave
 ret
 
-; entry* check_if_valid_binary(int op_type, entry* left_operand_type, entry* right_operant_type, table* type_table)
+; entry* check_if_valid_binary(int op_type, quad* left_operand, quad* right_operant, table* type_table)
 ; returns the subsequent type after valid operation or null if invalid types are provided
+; TODO: add better error reporting since the operands are now quads
 check_if_valid_binary:
 push ebp
 mov ebp, esp
-cmp dword [ebp + 8], ARITHMETIC_OP
-je .arithmetic
+sub esp, 8
+mov eax, dword [ebp + 12]
+mov eax, dword [eax + 12]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 16]
+mov eax, dword [eax + 12]
+mov dword [ebp - 8], eax
+cmp dword [ebp + 8], ARITHMETIC_ADD_SUB_OP
+je .arithmetic_add_sub
+cmp dword [ebp + 8], ARITHMETIC_MUL_DIV_OP
+je .arithmetic_mul_div
 cmp dword [ebp + 8], LOGIC_OP
 je .logical
 jmp .assignment
-.arithmetic:
+.arithmetic_add_sub:
 ; check for primitive arithmetic
-mov eax, dword [ebp + 12]
-mov edx, dword [ebp + 16]
+mov eax, dword [ebp - 4]
+mov edx, dword [ebp - 8]
 mov eax, dword [eax + 4]
 add eax, dword [edx + 4]
 cmp eax, 0
 je .primitive_arithmetic
 cmp eax, 1
 je .pointer_arithmetic
+cmp eax, 2
+je .array_decay
 jmp .error_exit
 .primitive_arithmetic:
-mov eax, dword [ebp + 12]
+mov eax, dword [ebp - 4]
 cmp dword [eax + 8], UINTEGER
 je .exit
-mov eax, dword [ebp + 16]
+mov eax, dword [ebp - 8]
 cmp dword [eax + 8], UINTEGER
 je .exit
 push integer_k
@@ -3785,16 +3814,33 @@ call hash_map_get
 add esp, 8
 jmp .exit
 .pointer_arithmetic:
-mov eax, dword [ebp + 12]
+mov eax, dword [ebp - 4]
 cmp dword [eax + 4], POINTER
 je .exit
-mov eax, dword [ebp + 16]
+mov eax, dword [ebp - 8]
 jmp .exit
+.array_decay:
+mov eax, dword [ebp - 4]
+cmp dword [eax + 4], POINTER
+je .error_exit
+cmp dword [eax + 4], ARRAY
+je .exit
+mov eax, dword [ebp - 8]
+jmp .exit
+.arithmetic_mul_div:
+mov eax, dword [ebp - 4]
+mov eax, dword [eax + 4]
+mov edx, dword [ebp - 8]
+mov eax, dword [edx + 4]
+add eax, edx
+cmp eax, 0
+jne .error_exit
+jmp .primitive_arithmetic
 .logical:
-mov eax, dword [ebp + 12]
+mov eax, dword [ebp - 4]
 cmp dword [eax + 4], STRUCTURE
 je .error_exit
-mov eax, dword [ebp + 16]
+mov eax, dword [ebp - 8]
 cmp dword [eax + 4], STRUCTURE
 je .error_exit
 push bool_k
@@ -3803,25 +3849,27 @@ call hash_map_get
 add esp, 8
 jmp .exit
 .assignment:
-mov eax, dword [ebp + 12]
-mov edx, dword [ebp + 16]
+mov eax, dword [ebp - 4]
+cmp dword [eax + 4], ARRAY
+je .error_exit
+mov edx, dword [ebp - 8]
 mov eax, dword [eax + 4]
 mov edx, dword [edx + 4]
 cmp eax, edx
 je .equal_complexity
 .mixed_complexity:
-mov eax, dword [ebp + 12]
+mov eax, dword [ebp - 4]
 cmp dword [eax + 4], PRIMITIVE
 je .error_exit
 cmp dword [eax + 4], STRUCTURE
 je .error_exit
-mov eax, dword [ebp + 16]
+mov eax, dword [ebp - 8]
 cmp dword [eax + 4], PRIMITIVE
-je .error_exit
+je .check_null_pointer
 cmp dword [eax + 4], STRUCTURE
 je .error_exit
 .equal_complexity:
-mov eax, dword [ebp + 12]
+mov eax, dword [ebp - 4]
 cmp dword [eax + 4], STRUCTURE
 je .structs
 cmp dword [eax + 4], POINTER
@@ -3829,48 +3877,58 @@ je .pointer_loop
 cmp dword [eax + 4], ARRAY
 jne .primitives
 .pointer_loop:
-mov eax, dword [ebp + 12]
+mov eax, dword [ebp - 4]
 mov eax, dword [eax + 8]
-mov dword [ebp + 12], eax
-mov eax, dword [ebp + 16]
+mov dword [ebp - 4], eax
+mov eax, dword [ebp - 8]
 mov eax, dword [eax + 8]
-mov dword [ebp + 16], eax
-push dword [ebp + 16]
-push dword [ebp + 12]
+mov dword [ebp - 8], eax
+push dword [ebp - 8]
+push dword [ebp - 4]
 call can_follow_pointer
 add esp, 8
 cmp eax, 0
 jne .pointer_loop
 .end_pointer_loop:
-mov eax, dword [ebp + 12]
-mov edx, dword [ebp + 16]
+mov eax, dword [ebp - 4]
+mov edx, dword [ebp - 8]
 mov eax, dword [eax + 4]
 cmp eax, dword [edx + 4]
 jne .error_exit
-mov eax, dword [ebp + 12]
+mov eax, dword [ebp - 4]
 cmp dword [eax + 4], PRIMITIVE
 jne .structs
 mov edx, dword [edx + 8]
 cmp dword [eax + 8], edx
 jne .error_exit
-mov eax, dword [ebp + 12]
+mov eax, dword [ebp - 4]
 jmp .exit
 .structs:
 mov eax, dword [eax]
 push eax
-mov eax, dword [ebp + 16]
+mov eax, dword [ebp - 8]
 mov eax, dword [eax]
 push eax
 call string_equals
 add esp, 8
 cmp eax, 0
 je .error_exit
-mov eax, dword [ebp + 12]
+mov eax, dword [ebp - 4]
 jmp .exit
 .primitives:
-mov eax, dword [ebp + 12]
+mov eax, dword [ebp - 4]
 jmp .exit
-
+.check_null_pointer:
+mov eax, dword [ebp - 4]
+cmp dword [eax + 4], POINTER
+jne .error_exit
+mov eax, dword [ebp + 16]
+cmp dword [eax], NUM
+jne .error_exit
+cmp dword [eax + 4], 0
+jne .error_exit
+mov eax, dword [ebp - 4]
+jmp .exit
 .error_exit:
 xor eax, eax
 .exit:
@@ -3920,7 +3978,8 @@ var_subscript_type: db "ERROR: semantic error, subscript value not integer type 
 invalid_return: db "ERROR: semantic error, returning invalid type in function '", 0
 func_call_wrong_type: db "ERROR: semantic error, type mismatch for parameter '", 0
 func_call_wrong_type_param: db "' for function call '", 0
-func_call_argument_amount: db "ERROR: semantic error, excess amount of arguments passed to function call '", 0
+func_call_argument_amount_more: db "ERROR: semantic error, excess amount of arguments passed to called function '", 0
+func_call_argument_amount_less: db "ERROR: semantic error, less than expected amount of arguments passed to called function '", 0
 single_quote_close: db "'.", 10, 0
 param_red: db "ERROR: semantic error, parameter '", 0
 func_red: db "ERROR: semantic error, function '", 0
