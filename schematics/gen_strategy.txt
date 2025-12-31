@@ -1,0 +1,91 @@
+int x;
+int[2] arr;
+
+x = 10 + 20;
+mov eax, 10
+add eax, 20
+mov dword [ebp - 4], eax
+
+x = x + 10;
+mov eax, dword [ebp - 4]
+add eax, 10
+mov dword [ebp - 4], eax
+
+x = 10 + x;
+mov eax, dword [ebp - 4]
+add eax, 10
+mov dword [ebp - 4], eax
+
+x = arr[0] + x;
+mov eax, dword [ebp - 12]
+add eax, dword [ebp - 4]
+mov dword [ebp - 4], eax
+
+arr[x] = arr[1] + x;
+mov eax, dword [ebp - 8]
+add eax, dword [ebp - 4]
+init_swap
+mov edx, eax
+mov eax, dword [ebp - 4]
+mov dword [ebp - 12 + eax * 4], edx
+
+
+
+operand precedence by calculation cost
+constant => id => member_access
+
+
+dword [ebp - 4294967296 + eax * 4294967296]
+
+4 space [3 space - space 10 space + space 3 space * 10]
+
+
+x = (x + y) / (a + b);
+
+mov eax, dword [ebp - 4]
+add eax, dword [ebp - 8]
+mov edx, dword [ebp - 12]
+add edx, dword [ebp - 16]
+add eax, edx
+cdq
+idiv ecx
+mov dwrod [ebp - 4], eax
+
+if op == div:
+    if free_register == ecx:
+        swap(ecx, edx)
+
+if yes mov edx into ecx
+
+
+op_a operation op_b
+
+
+left_operand operator right_operand
+
+generate_operator(int op, char* left_operand, char* right_operand)
+
+c = x + y;
+mov eax, dword [ebp - 4]
+add eax, dword [ebp - 8]
+mov dword [ebp - 12], eax
+
+
+-1 1
+
+ebp - 8
+ebp - 12
+
+
+x + 10
+
+cache = 0
+free_register = 0
+gen(x)
+cache = 0
+free_register = 1
+gen(10)
+
+0x1_0000
+
+multiply var by any even number
