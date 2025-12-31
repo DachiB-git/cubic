@@ -2299,7 +2299,6 @@ call check_if_valid_binary
 add esp, 16
 cmp eax, 0
 je .invalid_return_type
-mov eax, 1
 push eax
 push 0
 push dword [ebp - 8]
