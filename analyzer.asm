@@ -1801,6 +1801,41 @@ add esp, 32
 cmp eax, 0
 je .error_exit
 mov eax, dword [ebp + 8]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov edx, dword [eax + 8]
+mov eax, dword [eax + 12 + edx * 4 + 8]     ; load Rid.val
+mov dword [ebp - 8], eax
+mov eax, dword [eax + 12]
+cmp dword [eax + 4], ARRAY
+jne .skip
+.check_array_id:
+mov eax, dword [ebp - 8]
+cmp dword [eax], ID
+jne .skip
+.gen_array_addr:
+mov eax, dword [ebp - 8]
+mov eax, dword [eax + 12]
+push eax
+push 0
+push dword [ebp - 8]
+push ADDRESS_OP
+call get_quad
+add esp, 16
+mov dword [ebp - 8], eax
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]     ; load id.val addr
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+push dword [ebp - 8]
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
+mov eax, 1
+jmp .exit
+.skip:
+mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]     ; load id.val addr
 mov dword [ebp - 4], eax
@@ -3747,6 +3782,7 @@ je .valid
 cmp dword [eax], ACCESS_OP  ; access produces an lvalue
 jne .false
 .valid:
+mov eax, dword [ebp + 12]
 mov eax, dword [eax + 12]
 push eax
 push pointer
