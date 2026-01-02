@@ -69,6 +69,7 @@ mov byte [ebp - 4], al ; peek = get_char()
 ; if (peek is eof) end lexing
 cmp byte [ebp - 4], EOF 
 jne .no_end
+.eof:
 push EOF_k
 push EOF 
 call get_token
@@ -99,17 +100,54 @@ push dword [ebp - 20]
 call get_char
 add esp, 8
 mov byte [ebp - 4], al
+cmp byte [ebp - 4], EOF
+je .eof
 cmp byte [ebp - 4], 0x2F ; /
-jne .no_comment
-.comment_loop:
+je .single_line_comment_loop
+cmp byte [ebp - 4], 0x2A ; *
+je .multi_line_comment_loop
+jmp .end_loop 
+.single_line_comment_loop:
 push dword [ebp - 24]
 push dword [ebp - 20]
 call get_char
 add esp, 8
 mov byte [ebp - 4], al
+cmp byte [ebp - 4], EOF
+je .eof
 cmp byte [ebp - 4], 0x0A
-jne .comment_loop
-jmp .new_line
+je .new_line
+jmp .single_line_comment_loop
+.multi_line_comment_loop:
+push dword [ebp - 24]
+push dword [ebp - 20]
+call get_char
+add esp, 8
+mov byte [ebp - 4], al
+cmp byte [ebp - 4], EOF
+je .eof
+cmp byte [ebp - 4], 0x0A
+je .multi_new_line
+cmp byte [ebp - 4], 0x2A ; *
+je .check_multi_end
+jmp .multi_line_comment_loop
+.check_multi_end:
+push dword [ebp - 24]
+push dword [ebp - 20]
+call get_char
+add esp, 8
+mov byte [ebp - 4], al
+cmp byte [ebp - 4], EOF
+je .eof
+cmp byte [ebp - 4], 0x0A
+je .multi_new_line
+cmp byte [ebp - 4], 0x2F ; /
+je .continue
+jmp .multi_line_comment_loop
+.multi_new_line:
+mov eax, dword [ebp - 36]
+inc dword [eax]
+jmp .multi_line_comment_loop
 .no_comment:
 push dword [ebp - 24]
 call retract
