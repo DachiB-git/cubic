@@ -83,13 +83,37 @@ cmp byte [ebp - 4], 0x0D
 je .continue
 cmp byte [ebp - 4], 0x09
 je .continue
+cmp byte [ebp - 4], 0x2F ; /
+je .check_comment
 ; else if (peek == '\n') line++;
 cmp byte [ebp - 4], 0x0A
 jne .end_loop
+.new_line:
 ; else break
 mov eax, dword [ebp - 36]
 inc dword [eax]
 jmp .continue
+.check_comment:
+push dword [ebp - 24]
+push dword [ebp - 20]
+call get_char
+add esp, 8
+mov byte [ebp - 4], al
+cmp byte [ebp - 4], 0x2F ; /
+jne .no_comment
+.comment_loop:
+push dword [ebp - 24]
+push dword [ebp - 20]
+call get_char
+add esp, 8
+mov byte [ebp - 4], al
+cmp byte [ebp - 4], 0x0A
+jne .comment_loop
+jmp .new_line
+.no_comment:
+push dword [ebp - 24]
+call retract
+add esp, 4
 .end_loop:
 ; else if (peek is a digit)
 push dword [ebp - 4]
