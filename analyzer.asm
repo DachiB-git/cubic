@@ -1919,12 +1919,6 @@ mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov edx, dword [ebp - 4]
 mov dword [edx], eax
-mov edx, dword [ebp - 4]
-mov eax, dword [edx]
-push eax
-push dword [ebp + 16]
-call linked_list_append
-add esp, 8
 mov eax, 1
 jmp .exit
 .empty_rid:
@@ -2037,6 +2031,10 @@ push ACCESS_OP
 call get_quad
 add esp, 16
 mov dword [ebp - 8], eax
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
@@ -2091,6 +2089,10 @@ push ACCESS_OP
 call get_quad
 add esp, 16
 mov dword [ebp - 8], eax
+push eax
+push dword [ebp + 16]
+call linked_list_append
+add esp, 8
 mov eax, dword [ebp + 8]
 mov edx, dword [eax + 8]
 lea eax, dword [eax + 12 + edx * 4 + 8]
