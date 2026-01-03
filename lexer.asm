@@ -106,7 +106,7 @@ cmp byte [ebp - 4], 0x2F ; /
 je .single_line_comment_loop
 cmp byte [ebp - 4], 0x2A ; *
 je .multi_line_comment_loop
-jmp .end_loop 
+jmp .no_comment
 .single_line_comment_loop:
 push dword [ebp - 24]
 push dword [ebp - 20]
@@ -152,6 +152,7 @@ jmp .multi_line_comment_loop
 push dword [ebp - 24]
 call retract
 add esp, 4
+mov byte [ebp - 4], 0x2F ; /
 .end_loop:
 ; else if (peek is a digit)
 push dword [ebp - 4]
