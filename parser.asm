@@ -63,7 +63,7 @@ push prog
 
 .parse_loop:
 
-; cmp dword [ebp - jump_table_size - 12], 50
+; cmp dword [ebp - jump_table_size - 12], 25
 ; jl .skip 
 ; lea eax, dword [esp]
 ; push eax 
@@ -82,7 +82,7 @@ cmp dword [ebp - jump_table_size - 8], eax      ; check if token.tag = stack.top
 jne .check_if_terminal
 ; found a match 
 add esp, 4
-
+; xchg bx, bx
 mov eax, dword [ebp - jump_table_size - 4]
 cmp dword [eax], NAME
 jge .nonterm_token
@@ -193,25 +193,49 @@ jmp .parse_loop
 ; call print_tree
 ; add esp, 8
 
-lea eax, dword [ebp - jump_table_size - 32 - word_map_size]
-push eax
 mov eax, dword [ebp - jump_table_size - 4]
+push 10
+push itoa_buffer
 push dword [eax]
-call tag_to_str
-add esp, 4
-push eax
+call itoa
+add esp, 12
+push itoa_buffer
 call print_string
 add esp, 4
 push nl
 call print_string
 add esp, 4
 mov eax, dword [ebp - jump_table_size - 4]
+push 10
+push itoa_buffer
 push dword [eax + 4]
+call itoa
+add esp, 12
+push itoa_buffer
 call print_string
 add esp, 4
-push nl 
+push nl
 call print_string
 add esp, 4
+; lea eax, dword [ebp - jump_table_size - 32 - word_map_size]
+; push eax
+; mov eax, dword [ebp - jump_table_size - 4]
+; push dword [eax]
+; call tag_to_str
+; add esp, 4
+; push eax
+; call print_string
+; add esp, 4
+; push nl
+; call print_string
+; add esp, 4
+; mov eax, dword [ebp - jump_table_size - 4]
+; push dword [eax + 4]
+; call print_string
+; add esp, 4
+; push nl 
+; call print_string
+; add esp, 4
 push error_line
 call print_string
 add esp, 4
@@ -3082,7 +3106,7 @@ add esp, 16
 leave
 ret 
 
-; GenE -> FuncNa (ArgS) | JointE                  // first(GenE) = {FuncNa, Na, *, &, -, !, (, Num, true, false}
+; GenE -> FuncNa (ArgS) | JointE | StrLit         // first(GenE) = {FuncNa, Na, *, &, -, !, (, Num, true, false, StrLit}
                                                 ; // follow(GenE) = {, , ;, ), ]}
 init_GenE:
 push ebp 
@@ -3107,6 +3131,17 @@ call linked_list_append
 add esp, 8
 push dword [ebp - 4]
 push FUNCNAME
+push GenE
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push 0
+push STRLIT
+call get_linked_list
+add esp, 8
+mov dword [ebp - 4], eax
+push dword [ebp - 4]
+push STRLIT
 push GenE
 push dword [ebp + 8]
 call jump_table_init
@@ -3173,7 +3208,7 @@ add esp, 16
 leave 
 ret 
 
-; Arg -> GenE                                     // first(Arg) = {FuncNa, Na, *, &, -, !, (, Num, true, false}
+; Arg -> GenE                                     // first(Arg) = {StrLit, FuncNa, Na, *, &, -, !, (, Num, true, false}
                                                 ; // follow(Arg) = {, , )}
 init_Arg:
 push ebp 
@@ -3184,6 +3219,12 @@ push GenE
 call get_linked_list
 add esp, 8
 mov dword [ebp - 4], eax
+push dword [ebp - 4]
+push STRLIT
+push Arg 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
 push dword [ebp - 4]
 push FUNCNAME
 push Arg 
@@ -3248,7 +3289,7 @@ leave
 ret 
 
 
-; ArgS -> Arg RArgS | eps                         // first(ArgS) = {FuncNa, Na, *, &, -, !, (, Num, true, false, eps}
+; ArgS -> Arg RArgS | eps                         // first(ArgS) = {StrLit, FuncNa, Na, *, &, -, !, (, Num, true, false, eps}
                                                 ; // follow(ArgS) = {)}
 init_ArgS:
 push ebp 
@@ -3263,6 +3304,12 @@ push RArgS
 push dword [ebp - 4]
 call linked_list_append
 add esp, 8
+push dword [ebp - 4]
+push STRLIT
+push ArgS 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
 push dword [ebp - 4]
 push FUNCNAME
 push ArgS 

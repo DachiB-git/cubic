@@ -25,7 +25,8 @@
 %define LABEL 11
 %define PARAM 12
 %define CALL 13
-
+%define CONST_ADDR 14
+%define STR_QUAD 15
 ; RE -> + T RE | - T RE | eps  
 ; RT -> * F RT | / F RT | eps                     // first(RT) = {*, /, eps}
 ; RelOp -> > | >= | < | <= | == | !=              // first(RelOp) = {>, >=, <, <=, ==, !=}
@@ -38,6 +39,15 @@ analyzer:
 push ebp 
 mov ebp, esp 
 sub esp, 8
+push char_k
+push dword [ebp + 12]
+call hash_map_get
+add esp, 8
+push eax
+push pointer
+call get_composite_p_entry
+add esp, 8
+mov dword [type_for_str_lit], eax
 mov dword [ebp - 4], 0      ; **DS pointer
 mov dword [ebp - 8], 0      ; table pointer
 ; analyze the constructed parse tree
@@ -3053,7 +3063,30 @@ jmp .error_exit
 .GenE:
 cmp dword [eax + 8], 1
 jne .func_call
+mov eax, dword [eax + 12]
+cmp dword [eax], JointE
+je .translate_expression
+.translate_string_literal:
+mov eax, dword [ebp + 8]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 4]
+push dword [type_for_str_lit]
+push 0
+push eax
+push STR_QUAD
+call get_quad
+add esp, 16
+mov dword [ebp - 8], eax
+mov eax, dword [ebp + 8]
+mov edx, dword [eax + 8]
+lea eax, dword [eax + 12 + edx * 4 + 8]
+mov edx, dword [ebp - 8]
+mov dword [eax], edx
+jmp .exit
+
 .translate_expression:
+mov eax, dword [ebp + 8]
 mov eax, dword [eax + 12]
 push dword [ebp + 36]
 push dword [ebp + 32]
@@ -3995,6 +4028,7 @@ mov eax, 1
 leave
 ret
 
+type_for_str_lit: dd 0
 struct_self_ref: db "ERROR: semantic error, incomplete type for variable '", 0
 struct_self_ref_end: db "' in struct '", 0
 var_red: db "ERROR: semantic error, variable '", 0

@@ -154,6 +154,98 @@ call retract
 add esp, 4
 mov byte [ebp - 4], 0x2F ; /
 .end_loop:
+cmp byte [ebp - 4], 0x22 ; "
+jne .no_str_literal
+.str_literal:
+.lit_loop:
+push dword [ebp - 24]
+push dword [ebp - 20]
+call get_char
+add esp, 8
+mov byte [ebp - 4], al
+cmp byte [ebp - 4], EOF
+je .eof
+cmp byte [ebp - 4], 0x0A
+je .unterminated
+cmp byte [ebp - 4], 0x22 ; "
+je .get_str_lit_token
+lea eax, dword [ebp - 16]
+push eax 
+push dword [ebp - 28]    
+push dword [ebp - 4]                    ; load current char
+call string_builder_append              ; add to current buffer
+add esp, 12
+jmp .lit_loop
+.unterminated:
+push dword [ebp - 16] 
+push dword [ebp - 28]  
+call string_builder_to_string
+add esp, 8
+mov dword [ebp - 48], eax
+push dword [ebp - 48]
+push UNTERMINATEDLIT
+call get_token
+add esp, 8
+leave
+ret
+.get_str_lit_token:
+push dword [ebp - 16] 
+push dword [ebp - 28]  
+call string_builder_to_string
+add esp, 8
+mov dword [ebp - 48], eax
+lea eax, dword [ebp - 16]
+push eax 
+push dword [ebp - 28]    
+push 0x22   ; "
+call string_builder_append              ; add to current buffer
+add esp, 12
+push dword [ebp - 16] 
+push dword [ebp - 28]  
+call string_builder_to_string
+add esp, 8
+mov dword [ebp - 56], eax   ; save str_lit key
+push dword [ebp - 56]
+push dword [ebp - 32]
+call hash_map_get
+add esp, 8
+mov dword [ebp - 52], eax
+cmp eax, 0
+je .load_str_lit
+; make sure to free allocated string from builder to not polute heap
+mov eax, dword [ebp - 16]
+add eax, 2
+push eax
+call heap_free
+add esp, 8
+lea eax, dword [ebp - 16]
+push eax 
+push dword [ebp - 28]
+call string_builder_clear
+add esp, 8
+mov eax, dword [ebp - 52]
+leave
+ret
+.load_str_lit:
+push dword [ebp - 48]
+push STRLIT
+call get_token
+add esp, 8
+mov dword [ebp - 52], eax
+push word [ebp - 52]
+push dword [ebp - 56]
+push dword [ebp - 32]
+call hash_map_put
+add esp, 12
+lea eax, dword [ebp - 16]
+push eax 
+push dword [ebp - 28]
+call string_builder_clear
+add esp, 8
+mov eax, dword [ebp - 52]
+leave
+ret
+.no_str_literal:
 ; else if (peek is a digit)
 push dword [ebp - 4]
 call is_a_digit

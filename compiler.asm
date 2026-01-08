@@ -28,6 +28,8 @@
 %define FUNCNAME 279
 %define TRUE 280
 %define FALSE 281
+%define STRLIT 282
+%define UNTERMINATEDLIT 283
 
 %define prog 300 
 %define TyDS 301
@@ -279,12 +281,42 @@ add esp, 16
 cmp eax, 0                  ; semantic error detected
 je .exit
 
+
+; push main_k
+; push dword [ebp - 64]
+; call hash_map_get
+; add esp, 8
+; mov eax, dword [eax + 16]   ; TAC_list
+; mov eax, dword [eax + 4]    ; skip START node
+; mov dword [ebp - 48], eax
+; .loop:
+; mov eax, dword [ebp - 48]
+; cmp eax, 0
+; je .gen
+; mov eax, dword [eax]
+; push 10
+; push itoa_buffer
+; push dword [eax]
+; call itoa
+; add esp, 12
+; push itoa_buffer
+; call print_string
+; add esp, 4
+; push nl
+; call print_string
+; add esp, 4
+; mov eax, dword [ebp - 48]
+; mov eax, dword [eax + 4]
+; mov dword [ebp - 48], eax
+; jmp .loop
+; .gen:
 ; start code_gen
+push dword [ebp - 56]
 push dword [ebp - 64]
 push dword [ebp - 60]
 push dword [ebp - 48]
 call generator
-add esp, 12
+add esp, 16
 
 .exit:
 leave 
