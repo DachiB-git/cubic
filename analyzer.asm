@@ -611,7 +611,7 @@ mov dword [ebp - 24], eax   ; save ArrDeco
 mov eax, dword [ebp - 24]
 cmp dword [eax + 8], 0
 je .composite_type
-cmp dword [eax + 8], 2
+cmp dword [eax + 8], PaDArrDeco
 je .parameter_arr
 lea eax, dword [eax + 12]   ; load children baddr
 mov eax, dword [eax + 4]    ; load Num node
@@ -620,7 +620,16 @@ mov eax, dword [eax + 4]    ; load lexeme
 push eax 
 jmp .end_check
 .parameter_arr:
-push 0
+push 1
+push dword [ebp - 20]
+push array
+call get_composite_arr_entry
+add esp, 12
+mov dword [ebp - 20], eax
+mov eax, dword [ebp - 24]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+mov dword [ebp - 24], eax
 .end_check:
 push dword [ebp - 20]
 push array
@@ -737,7 +746,7 @@ mov dword [ebp - 24], eax   ; save ArrDeco
 mov eax, dword [ebp - 24]
 cmp dword [eax + 8], 0
 je .composite_type
-cmp dword [eax + 8], 2
+cmp dword [eax], PaDArrDeco
 je .parameter_arr
 lea eax, dword [eax + 12]   ; load children baddr
 mov eax, dword [eax + 4]    ; load Num node
@@ -746,7 +755,17 @@ mov eax, dword [eax + 4]    ; load lexeme
 push eax 
 jmp .end_check
 .parameter_arr:
-push 0
+push 1
+push dword [ebp - 20]
+push array
+call get_composite_arr_entry
+add esp, 12
+mov dword [ebp - 20], eax
+mov eax, dword [ebp - 24]
+lea eax, dword [eax + 12]
+mov eax, dword [eax + 8]
+mov dword [ebp - 24], eax
+jmp .array_loop
 .end_check:
 push dword [ebp - 20]
 push array
@@ -1025,7 +1044,7 @@ ret
 construct_func:
 push ebp
 mov ebp, esp
-sub esp, 86
+sub esp, 90
 mov dword [ebp - 4], 0      ; FuD pointer
 mov dword [ebp - 8], 0      ; new_name_lexeme pointer
 mov dword [ebp - 12], 0     ; type_lexeme pointer
