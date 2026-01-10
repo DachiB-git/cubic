@@ -82,7 +82,6 @@ cmp dword [ebp - jump_table_size - 8], eax      ; check if token.tag = stack.top
 jne .check_if_terminal
 ; found a match 
 add esp, 4
-; xchg bx, bx
 mov eax, dword [ebp - jump_table_size - 4]
 cmp dword [eax], NAME
 jge .nonterm_token
@@ -2490,7 +2489,7 @@ call jump_table_init
 add esp, 16
 leave 
 ret 
-; F -> id | -F | !F | *F | &F | ( E ) | Num       // first(F) = {Na, -, !, *, &, (, Num, true, false}
+; F -> id | -F | !F | *F | &F | ( JointE ) | Num       // first(F) = {Na, -, !, *, &, (, Num, true, false}
 ; | true | false  
                                                 ; // follow(F) = {*, /, +, -, ), >, >=, <, <=, ==, !=, ||, ], , , ;, )}
 init_F:
@@ -2573,7 +2572,7 @@ push 0x28 ; (
 call get_linked_list
 add esp, 8
 mov dword [ebp - 4], eax
-push E 
+push JointE 
 push dword [ebp - 4]
 call linked_list_append
 add esp, 8
