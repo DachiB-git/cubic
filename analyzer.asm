@@ -1189,13 +1189,6 @@ mov eax, dword [ebp - 56]
 mov edx, dword [ebp - 48]
 mov dword [eax + 8], edx
 mov eax, dword [eax + 4]
-.loop1:
-cmp dword [eax + 4], ARRAY
-jne .check1
-mov eax, dword [eax + 8]
-jmp .loop1
-.check1:
-.end_check1:
 mov eax, dword [eax + 12]
 mov edx, eax
 and edx, 3
@@ -1240,13 +1233,6 @@ mov eax, dword [ebp - 56]
 mov edx, dword [ebp - 48]
 mov dword [eax + 8], edx
 mov eax, dword [eax + 4]
-.loop2:
-cmp dword [eax + 4], ARRAY
-jne .check2
-mov eax, dword [eax + 8]
-jmp .loop2
-.check2:
-.end_check2:
 mov eax, dword [eax + 12]
 mov edx, eax
 and edx, 3
@@ -1292,13 +1278,6 @@ call hash_map_get
 add esp, 8
 mov dword [ebp - 56], eax
 mov eax, dword [eax + 4]
-.loop3:
-cmp dword [eax + 4], ARRAY
-jne .check3
-mov eax, dword [eax + 8]
-jmp .loop3
-.check3:
-.end_check3:
 mov eax, dword [eax + 12]
 mov edx, eax
 and edx, 3
