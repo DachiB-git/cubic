@@ -504,10 +504,13 @@ leave
 ret 
 
 ; (prog, TyNa) -> TyDS VaDS FuDS
+; (prog, char) -> TyDS VaDS FuDS
+; (prog, short) -> TyDS VaDS FuDS
 ; (prog, int) -> TyDS VaDS FuDS
+; (prog, uchar) -> TyDS VaDS FuDS
+; (prog, ushort) -> TyDS VaDS FuDS
 ; (prog, uint) -> TyDS VaDS FuDS
 ; (prog, bool) -> TyDS VaDS FuDS
-; (prog, char) -> TyDS VaDS FuDS
 ; (prog, typedef) -> TyDS VaDS FuDS
 ; (prog, func) -> TyDS VaDS FuDS
 ; (prog, $) -> TyDS VaDS FuDS
@@ -538,7 +541,31 @@ push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 push dword [ebp - 4]
+push CHAR
+push prog 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push SHORT
+push prog 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
 push INTEGER
+push prog 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push UCHAR
+push prog 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push USHORT
 push prog 
 push dword [ebp + 8]
 call jump_table_init
@@ -551,12 +578,6 @@ call jump_table_init
 add esp, 16
 push dword [ebp - 4]
 push BOOL 
-push prog 
-push dword [ebp + 8]
-call jump_table_init
-add esp, 16
-push dword [ebp - 4]
-push CHAR 
 push prog 
 push dword [ebp + 8]
 call jump_table_init
@@ -584,10 +605,13 @@ ret
 
 
 ; (TyDS, typedef) -> TyD TyDS 
+; (TyDS, char) -> EPSILON 
+; (TyDS, short) -> EPSILON 
 ; (TyDS, int) -> EPSILON 
+; (TyDS, uchar) -> EPSILON 
+; (TyDS, ushort) -> EPSILON 
 ; (TyDS, uint) -> EPSILON 
 ; (TyDS, bool) -> EPSILON 
-; (TyDS, char) -> EPSILON 
 ; (TyDS, TyNa) -> EPSILON 
 ; (TyDS, func) -> EPSILON
 init_TyDS:
@@ -612,7 +636,31 @@ push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 push EPSILON
+push CHAR 
+push TyDS 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push SHORT 
+push TyDS 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
 push INTEGER
+push TyDS 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push UCHAR 
+push TyDS 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push USHORT 
 push TyDS 
 push dword [ebp + 8]
 call jump_table_init
@@ -625,12 +673,6 @@ call jump_table_init
 add esp, 16
 push EPSILON
 push BOOL 
-push TyDS 
-push dword [ebp + 8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push CHAR 
 push TyDS 
 push dword [ebp + 8]
 call jump_table_init
@@ -678,12 +720,15 @@ call jump_table_init
 leave
 ret
 
-; TE -> Ty TyDeco TyNa | struct TyNa { VaDS }               // first(TE) = {int, uint, bool, char, TyNa, struct}
+; TE -> Ty TyDeco TyNa | struct TyNa { VaDS }               // first(TE) = {char, short, int, uchar, ushort, uint, bool, TyNa, struct}
                                                 ;           // follow(TE) = {TyNa}
+; (TE, char) -> Ty TyDeco TyNa
+; (TE, short) -> Ty TyDeco TyNa
 ; (TE, int) -> Ty TyDeco TyNa
+; (TE, uchar) -> Ty TyDeco TyNa
+; (TE, ushort) -> Ty TyDeco TyNa
 ; (TE, uint) -> Ty TyDeco TyNa
 ; (TE, bool) -> Ty TyDeco TyNa
-; (TE, char) -> Ty TyDeco TyNa
 ; (TE, TyNa) -> Ty TyDeco TyNa
 ; (TE, struct) -> struct TyNa { VaDS }
 init_TE:
@@ -704,7 +749,31 @@ push dword [ebp - 4]
 call linked_list_append
 add esp, 8
 push dword [ebp - 4]
+push CHAR
+push TE 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push SHORT
+push TE 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
 push INTEGER
+push TE 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push UCHAR
+push TE 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push USHORT
 push TE 
 push dword [ebp + 8]
 call jump_table_init
@@ -717,12 +786,6 @@ call jump_table_init
 add esp, 16
 push dword [ebp - 4]
 push BOOL
-push TE 
-push dword [ebp + 8]
-call jump_table_init
-add esp, 16
-push dword [ebp - 4]
-push CHAR
 push TE 
 push dword [ebp + 8]
 call jump_table_init
@@ -764,12 +827,34 @@ leave
 ret
 
 
-; Ty -> int | uint | bool | char | TyNa             // first(Ty) = {int, uint, bool, char, TyNa}
+; Ty -> int | uint | bool | char | TyNa             // first(Ty) = {char, short, int, uchar, ushort, uint, bool, TyNa}
                                                 ;   // follow(Ty) = {Na, [, *, TyNa}
 init_Ty:
 push ebp
 mov ebp, esp 
 sub esp, 4
+push 0
+push CHAR
+call get_linked_list
+add esp, 8
+mov dword [ebp - 4], eax
+push dword [ebp - 4]
+push CHAR
+push Ty
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push 0
+push SHORT
+call get_linked_list
+add esp, 8
+mov dword [ebp - 4], eax 
+push dword [ebp - 4]
+push SHORT
+push Ty
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
 push 0
 push INTEGER
 call get_linked_list
@@ -777,6 +862,28 @@ add esp, 8
 mov dword [ebp - 4], eax 
 push dword [ebp - 4]
 push INTEGER
+push Ty
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push 0
+push UCHAR
+call get_linked_list
+add esp, 8
+mov dword [ebp - 4], eax
+push dword [ebp - 4]
+push UCHAR
+push Ty
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push 0
+push USHORT
+call get_linked_list
+add esp, 8
+mov dword [ebp - 4], eax
+push dword [ebp - 4]
+push USHORT
 push Ty
 push dword [ebp + 8]
 call jump_table_init
@@ -801,17 +908,6 @@ push dword [ebp - 4]
 push BOOL
 push Ty
 push dword[ebp + 8]
-call jump_table_init
-add esp, 16
-push 0
-push CHAR
-call get_linked_list
-add esp, 8
-mov dword [ebp - 4], eax
-push dword [ebp - 4]
-push CHAR
-push Ty
-push dword [ebp + 8]
 call jump_table_init
 add esp, 16
 push 0
@@ -975,13 +1071,16 @@ add esp, 16
 leave
 ret 
 
-; VaDS -> VaD VaDS | eps                          // first(VaDS) = {int, uint, bool, char, TyNa, eps}
+; VaDS -> VaD VaDS | eps                          // first(VaDS) = {char, short, int, uchar, ushort, uint, bool, TyNa, eps}
                                                 ; // follow(VaDS) = { }, func, Na, if, while, do, return, FuncNa}
 
+; (VaDS, char) -> VaD VaDS 
+; (VaDS, short) -> VaD VaDS 
 ; (VaDS, int) -> VaD VaDS 
+; (VaDS, uchar) -> VaD VaDS 
+; (VaDS, ushort) -> VaD VaDS 
 ; (VaDS, uint) -> VaD VaDS 
 ; (VaDS, bool) -> VaD VaDS 
-; (VaDS, char) -> VaD VaDS 
 ; (VaDS, TyNa) -> VaD VaDS 
 ; (VaDS, }) -> EPSILON 
 ; (VaDS, func) -> EPSILON
@@ -1006,7 +1105,31 @@ push dword [ebp - 4]
 call linked_list_append
 add esp, 8
 push dword [ebp - 4]
+push CHAR
+push VaDS
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push SHORT
+push VaDS
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
 push INTEGER
+push VaDS
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push UCHAR
+push VaDS
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push USHORT
 push VaDS
 push dword [ebp + 8]
 call jump_table_init
@@ -1019,12 +1142,6 @@ call jump_table_init
 add esp, 16
 push dword [ebp - 4]
 push BOOL
-push VaDS
-push dword [ebp + 8]
-call jump_table_init
-add esp, 16
-push dword [ebp - 4]
-push CHAR
 push VaDS
 push dword [ebp + 8]
 call jump_table_init
@@ -1086,8 +1203,8 @@ add esp, 16
 leave
 ret 
 
-; VaD -> Ty TyDeco Na ;                                  // first(VaD) = {int, uint, bool, char, TyNa}
-                                                       ; // follow(VaD) = {int, uint, bool, char, TyNa}
+; VaD -> Ty TyDeco Na ;                                  // first(VaD) = {char, short, int, uchar, ushort, uint, bool, TyNa}
+                                                       ; // follow(VaD) = {char, short, int, uchar, ushort, uint, bool, TyNa}
 
 init_VaD:
 push ebp 
@@ -1111,7 +1228,31 @@ push dword [ebp - 4]
 call linked_list_append
 add esp, 8
 push dword [ebp - 4]
+push CHAR
+push VaD 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push SHORT
+push VaD 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
 push INTEGER
+push VaD 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push UCHAR
+push VaD 
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push USHORT
 push VaD 
 push dword [ebp + 8]
 call jump_table_init
@@ -1124,12 +1265,6 @@ call jump_table_init
 add esp, 16
 push dword [ebp - 4]
 push BOOL
-push VaD 
-push dword [ebp + 8]
-call jump_table_init
-add esp, 16
-push dword [ebp - 4]
-push CHAR
 push VaD 
 push dword [ebp + 8]
 call jump_table_init
@@ -1259,7 +1394,7 @@ add esp, 16
 leave
 ret 
 
-; PaDS -> PaD RPaDS | eps                         // first(PaDS) = {int, uint, bool, char, TyNa, eps}
+; PaDS -> PaD RPaDS | eps                         // first(PaDS) = {char, short, int, uchar, ushort, uint, bool, TyNa, eps}
                                                 ; // follow(PaDS) = {)}
 
 init_PaDS:
@@ -1276,7 +1411,31 @@ push dword [ebp - 4]
 call linked_list_append
 add esp, 8
 push dword [ebp - 4]
+push CHAR
+push PaDS
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push SHORT
+push PaDS
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
 push INTEGER
+push PaDS
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push UCHAR
+push PaDS
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push USHORT
 push PaDS
 push dword [ebp + 8]
 call jump_table_init
@@ -1289,12 +1448,6 @@ call jump_table_init
 add esp, 16
 push dword [ebp - 4]
 push BOOL
-push PaDS
-push dword [ebp + 8]
-call jump_table_init
-add esp, 16
-push dword [ebp - 4]
-push CHAR
 push PaDS
 push dword [ebp + 8]
 call jump_table_init
@@ -1314,7 +1467,7 @@ add esp, 16
 leave 
 ret 
 
-; PaD -> Ty PaDTyDeco Na                             // first(PaD) = {int, uint, bool, char, TyNa}
+; PaD -> Ty PaDTyDeco Na                             // first(PaD) = {char, short, int, uchar, ushort, uint, bool, TyNa}
                                                 ; // follow(PaD) = {,}
 init_PaD:
 push ebp 
@@ -1334,7 +1487,31 @@ push dword [ebp - 4]
 call linked_list_append
 add esp, 8
 push dword [ebp - 4]
+push CHAR
+push PaD
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push SHORT
+push PaD
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
 push INTEGER
+push PaD
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push UCHAR
+push PaD
+push dword [ebp + 8]
+call jump_table_init
+add esp, 16
+push dword [ebp - 4]
+push USHORT
 push PaD
 push dword [ebp + 8]
 call jump_table_init
@@ -1347,12 +1524,6 @@ call jump_table_init
 add esp, 16
 push dword [ebp - 4]
 push BOOL
-push PaD
-push dword [ebp + 8]
-call jump_table_init
-add esp, 16
-push dword [ebp - 4]
-push CHAR
 push PaD
 push dword [ebp + 8]
 call jump_table_init
