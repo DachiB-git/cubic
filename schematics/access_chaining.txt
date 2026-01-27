@@ -1,0 +1,20 @@
+
+id -> Na Rid
+
+Rid -> idSel Rid | eps
+idSel -> .Na | [Gen]
+
+Na[0].Na
+
+
+int arr[2][2];
+
+[
+    [int int]
+    [int int]
+]
+
+[0][1]
+1 * 4
+
+*(arr_base + (i + j))

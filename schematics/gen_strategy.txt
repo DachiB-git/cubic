@@ -1,91 +1,404 @@
-int x;
-int[2] arr;
+char
+int 
+uint
+bool
+void*
+struct
+array
 
-x = 10 + 20;
-mov eax, 10
-add eax, 20
-mov dword [ebp - 4], eax
++       int/uint or *
+-       int/uint or *
+*       int/uint 
+/       int/uint
+&       *
+* deref typeof(*)
 
-x = x + 10;
+
+this will lead to alot of heap pollution
+since we will have dangling pointers
+but the current heap system is just a simple incrementor so it is fine
+operations on constants
+NUM => update the num quad with calculated value | proximity reduction
+
+
+operand op operand
+constant op constant
+resolved to new_constant = constant op constant
+id op constant
+load first_operand
+do op_imm with second_operand
+id op id 
+load first_operand
+load second_operand
+do op
+
+// single swap
+/*
+x = x / y;
 mov eax, dword [ebp - 4]
-add eax, 10
-mov dword [ebp - 4], eax
-
-x = 10 + x;
-mov eax, dword [ebp - 4]
-add eax, 10
-mov dword [ebp - 4], eax
-
-x = arr[0] + x;
-mov eax, dword [ebp - 12]
-add eax, dword [ebp - 4]
-mov dword [ebp - 4], eax
-
-arr[x] = arr[1] + x;
-mov eax, dword [ebp - 8]
-add eax, dword [ebp - 4]
-init_swap
-mov edx, eax
-mov eax, dword [ebp - 4]
-mov dword [ebp - 12 + eax * 4], edx
-
-
-
-operand precedence by calculation cost
-constant => id => member_access
-
-
-dword [ebp - 4294967296 + eax * 4294967296]
-
-4 space [3 space - space 10 space + space 3 space * 10]
-
-
-x = (x + y) / (a + b);
-
-mov eax, dword [ebp - 4]
-add eax, dword [ebp - 8]
-mov edx, dword [ebp - 12]
-add edx, dword [ebp - 16]
-add eax, edx
+mov edx, dword [ebp - 8]
+mov ecx, edx
 cdq
 idiv ecx
-mov dwrod [ebp - 4], eax
 
-if op == div:
-    if free_register == ecx:
-        swap(ecx, edx)
+*/
 
-if yes mov edx into ecx
-
-
-op_a operation op_b
-
-
-left_operand operator right_operand
-
-generate_operator(int op, char* left_operand, char* right_operand)
-
-c = x + y;
+// double swap 
+/*
 mov eax, dword [ebp - 4]
-add eax, dword [ebp - 8]
-mov dword [ebp - 12], eax
+add eax, 25
+mov edx, dword [ebp - 8]
+mov ecx, eax
+mov eax, edx
+cdq
+idiv dword [ebp - 8]
+mov edx, eax
+mov eax, ecx
+*/
+
+; li      M,0x55555556    Load magic number, (2**32+2)/3.
+; mulhs   q,M,n           q = floor(M*n/2**32).
+; shri    t,n,31          Add 1 to q if
+; add     q,q,t           n is negative.
 
 
--1 1
+; SIGNED
+; DIVISION BY 3
+1 used register
+; ecx holds eax
+; ebx holds edx
+mov eax, 10
+mov edx, 9
+mov ecx, eax
+mov eax, edx
+mov ebx, edx
+mov edx, 0x55555556
+imul edx
+mov eax, ecx
+mov ecx, ebx
+shr ecx, 31
+add edx, ecx
 
-ebp - 8
-ebp - 12
+t = n << 31
+q = M * (n + t) = Mn + Mt 
+q = q + t
 
 
-x + 10
+; 0 used registers
+mov eax, 9
+mov ecx, eax
+mov edx, 0x55555556
+imul edx
+shr ecx, 31
+add edx, ecx
+mov eax, edx
 
-cache = 0
-free_register = 0
-gen(x)
-cache = 0
-free_register = 1
-gen(10)
+; UNSIGNED
+; DIVISION BY 3
+; 0 used registers | a = 0
+mov eax, 9
+mov edx, M
+mul edx
+shr edx, 1
+mov eax, edx
 
-0x1_0000
+; 1 used register | a = 0
+mov eax, n0
+mov edx, 9
+mov ecx, eax
+mov eax, edx
+mov edx, M
+mul edx
+shr edx, 1
+mov eax, ecx
 
-multiply var by any even number
+; 0 used registers | a = 1
+mov eax, 10
+mov ecx, eax
+mov edx, M
+mul edx
+sub ecx, edx
+shr ecx, 1
+add ecx, edx
+shr ecx, 2
+mov eax, ecx
+
+; 1 used registers | a = 1
+mov eax, n0
+mov edx, 9
+mov ecx, edx
+mov ebx, eax
+mov eax, edx
+mov edx, M
+mul edx
+sub ecx, edx
+shr ecx, 1
+add ecx, edx
+shr ecx, 2
+mov edx, ecx
+mov eax, ebx
+rem(2p - 1, d) overflow error
+how to fix mots 
+I DID FIX IT MOTS CHRIST IS LORD
+
+
+
+add_quad = x + 10
+add_quad_2 = x + 20
+    l1                         l2                             tac_list          
+last_quad -> add_quad -> param add_quad -> add_quad_2 -> param add_quad_2 
+
+last_quad -> add_quad_2 -> param_add_quad_2 -> add_quad -> param add_quad
+
+temp = l1.next
+l1.next = l2.next
+l2.next = null
+
+add(x + 10, x + 20);
+
+
+
+
+label_counter = 1 after do_while
+label_counter = 3 after if or while
+
+if (x > 10)
+{
+    x = x > 20;
+}
+
+
+x > x
+mov eax, dword [ebp - 4]
+cmp eax, dword [ebp - 8]
+
+x > 10
+10 < x
+x >= 10
+10 <= x
+
+
+// STRUCTURE OF ADDR_QUAD
+// TAG -> ADDR_QUAD
+// OPERAND -> ID
+// OFFSET -> DUAL_QUAD
+// TYPE -> preserved type from prev operation
+
+// OPERANDS RANKED BY COMPLEXITY (FROM MOST TO LEAST)
+ID
+ADDR_QUAD
+NUM | BOOL | STR_QUAD
+
+// COMPLEX CONSTANT OPERAND
+ADDR_QUAD
+// SIMPLE CONSTANT OPERAND
+STR_QUAD
+NUM 
+BOOL 
+// OPERANDS
+ID
+
+// OPERATIONS WITH SIMPLE OR COMPLEX CONSTANTS AND OPERANDS
+ASSIG_OP
+
+// NO OPERAND OPERATIONS | NO OPERANDS PRODUCING OPERATONS
+GOTO
+LABEL
+PARAM
+COND_GOTO
+CALL
+BRANCH_LT           
+BRANCH_LE
+BRANCH_GT
+BRANCH_GE
+BRANCH_EQ
+BRANCH_NE
+
+// INTERMEDIATES WITH NO OR SIMPLE CONSTANTS
+UNARY_MINUS_OP      can produce => NUM or BOOL
+NEG_OP              can produce => BOOL
+MUL_OP              can produce => NUM
+DIV_OP              can produce => NUM
+LT                  can produce => BOOL
+LE                  can produce => BOOL
+GT                  can produce => BOOL
+GE                  can produce => BOOL
+EQ                  can produce => BOOL
+NE                  can produce => BOOL
+
+// INTERMEDIATES WITH NO OR SIMPLE AND COMPLEX CONSTANTS
+DEREF_OP            can produce => ADDR_QUAD
+ADDRESS_OP          can produce => ADDR_QUAD
+ACCESS_OP           can produce => ADDR_QUAD
+MEMBER_OP           can produce => ADDR_QUAD
+PLUS_OP             can produce => NUM or ADDR_QUAD
+MINUS_OP            can produce => NUM or ADDR_QUAD
+
+DEREF_OP => used on a pointer in stack => load value in register => INTERMEDIATE
+DEREF_OP => used on a pointer in gm => gm_label => change to ADDR_QUAD
+ADDRESS_OP => used on an id in stack => load value in register => INTERMEDIATE
+ADDRESS_OP => used on an id in gm => gm_label => change to ADDR_QUAD
+PLUS_OP => used on a pointer in stack => load value in register and increment => INTERMEDIATE
+PLUS_OP => used on a pointer in gm => gm_label with offset => change to ADDR_QUAD and load offset
+MINUS_OP => same as PLUS_OP
+
+
+// OPERAND GENERATION
+types of operands that we can have
+any stack variable
+[ebp - NUM]  |  [ebp + NUM]
+[ebp - NUM + REG]
+[ebp - NUM + REG * NUM]
+
+any gm label
+label 
+label + NUM
+
+address of a label is the label itself
+
+
+
+list.pair.first = 10
+
+
+
+t1 = <ID, list, 0, typeof(list)>
+
+t2 = <MEMBER_OP, t1, pair, typeof(pair)>
+
+t3 = <MEMBER_OP, t2, first, typeof(first)>
+
+member_op(ID, NA) = <ID, ID.entry, Na.entry, typeof(Na.entry)>
+
+
+s.nums[s.nums[0]] + 1;
+
+t1 -> t2 -> t3
+
+
+SINGLE
+START - INTERIM - END
+START - END
+
+
+arr[x] = x;
+BEGIN:
+alloc  = 1 | subscript x is loaded beforehand
+ebp-12 = 1 | load ebp-12
+alloc  = 2 | rvalue x is loaded
+subscript_reg = ebp - 12
+
+arr[x] = x + 1;
+BEGIN:
+alloc  = 1 | x + 1 intermediate is loaded beforehand
+alloc  = 2 | subscript x is loaded beforehand
+ebp-12 = 2 | load ebp-12
+alloc  = 2 | rvalue is an intermediate
+subscript_reg = ebp - 12
+
+// inline pointer derefrencing
+x = p[0];
+x = p[0][0];
+x = list[0].next[0].val;
+x = list[0].val;
+
+// any access operation after initial causes a derefrencing event to fire
+// if quad.tag is SINGLE_ACCESS_OP or LAST_ACCESS_OP, deref pointer
+// if quad.tag is FIRST_ACCESS_OP, preload pointer
+// if quad.tag is FIRST_MEMBER_OP, preload pointer
+// if quad.tag is MEMBER_OP, increment the offset value in dual_quad
+
+
+int x;
+int** p;
+x = p[x + 1][x + 2]
+
+// START SECTION
+mov eax, dword [ebp - 4]
+add eax, 1
+mov edx, dword [ebp - 8]
+imul eax, 4
+add eax, edx
+// END SECTION
+
+// START SECTION
+mov edx, dword [ebp - 4]
+add edx, 2
+mov eax, dword [eax]
+imul edx, 4
+add eax, edx
+// END SECTION
+
+
+/*
+
+
+
+
+
+
+
+
+
+a OR b
+if a goto true
+if not b goto false
+.true:
+mov eax, 1
+jmp .end
+.false:
+mov eax, 0
+.end:
+mov dword [ebp - 4], eax
+
+a AND b
+if not a goto false
+if not b goto false
+.true:
+mov eax, 1
+jmp .end
+.false:
+mov eax, 0
+.end:
+mov dword [ebp - 4], eax
+
+
+a OR b OR c
+
+if a goto true
+if b goto true
+if not c goto false
+
+new OR changes the last ORs right cond_goto
+
+a AND b AND c
+if not a goto false
+if not b goto false
+if not c goto false
+.true:
+mov eax, 1
+jmp .end
+.false:
+mov eax, 0
+.end:
+
+a OR b AND C
+if a goto true
+if not b goto false
+if not c goto false
+
+a AND b OR c
+if not a goto .b_check
+
+.b_check
+if b got true
+if not c goto false
+
+new OR changes the last ANDs right cond_goto and left cond_goto
+
+invariant: every time we see a chain, and the chain is currently on OR, complement the last seen cond_goto
+
+*/
+
+
+x * 3

@@ -1,0 +1,19 @@
+primitive types 
+bool char int uint
+
+
+reg -> int type
+
+TYPE    LOAD INTO ADDR SAME TYPE    |    LOAD INTO REGISTER
+uint    mov dword [ebp - 4], eax    |    mov   eax, dword [ebp - 4]
+int     mov dword [ebp - 4], eax    |    mov   eax, dword [ebp - 4]
+char    mov byte  [ebp - 4], al     |    movsx eax, byte  [ebp - 4]
+bool    mov byte  [ebp - 4], al     |    movzx eax, byte  [ebp - 4]
+
+TYPE    
+uint
+int
+
+shrinking
+
+expanding

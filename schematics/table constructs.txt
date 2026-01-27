@@ -6,7 +6,7 @@ TypeEntry {
 }
 
 PrimitiveTypeEntry(TypeEntry) {
-    type: Enum(INTEGER, UINTEGER, BOOL, CHAR)
+    type: Enum(INT, UINT, BOOL, CHAR)
 }
 
 CompositeTypeEntry(TypeEntry) {

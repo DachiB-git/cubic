@@ -1,0 +1,11 @@
+id -> Na Rid
+
+Rid -> idSel Rid | eps
+Rid -> (Rid)
+
+
+
+idSel -> .Na | [Gen]
+
+
+*(list.next).val
