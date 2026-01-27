@@ -4,32 +4,37 @@
 %define EOF 0
 %define NAME 256
 %define NUM 257
-%define INTEGER 258
-%define UINTEGER 259
-%define BOOL 260
-%define CHAR 261
-%define TYPEDEF 262
-%define LT 263
-%define LE 264
-%define GT 265
-%define GE 266
-%define EQ 267
-%define NE 268
-%define AND_OP 269
-%define OR_OP 270
-%define IF 271
-%define ELSE 272
-%define WHILE 273
-%define DO 274
-%define STRUCT 275
-%define RETURN 276
-%define FUNC 277
-%define TYNAME 278
-%define FUNCNAME 279
-%define TRUE 280
-%define FALSE 281
-%define STRLIT 282
-%define UNTERMINATEDLIT 283
+%define TYPEDEF 258
+%define LT 259
+%define LE 260
+%define GT 261
+%define GE 262
+%define EQ 263
+%define NE 264
+%define AND_OP 265
+%define OR_OP 266
+%define IF 267
+%define ELSE 268
+%define WHILE 269
+%define DO 270
+%define STRUCT 271
+%define RETURN 272
+%define FUNC 273
+%define TYNAME 274
+%define FUNCNAME 275
+%define TRUE 276
+%define FALSE 277
+%define STRLIT 278
+%define UNTERMINATEDLIT 279
+; define signed types smallest to largest
+%define CHAR 280
+%define SHORT 281
+%define INT 282
+; define unsigned types smallest to largest and bool
+%define UCHAR 283
+%define USHORT 284
+%define UINT 285
+%define BOOL 286
 
 %define prog 300 
 %define TyDS 301
@@ -52,7 +57,7 @@
 %define GenE 319
 %define ArgS 320 
 %define MatchedElse 321
-%define ID 322
+%define id 322
 %define Rid 323
 %define idSel 324
 %define E 325
@@ -167,23 +172,38 @@ add esp, 8
 mov dword [ebp - 64], eax                   ; store func_table
 
 ; init table with reserved keywords
-push INTEGER
+push CHAR
+push char_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push SHORT
+push short_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push INT
 push integer_k
 push dword [ebp - 52]
 call symbol_table_init
 add esp, 12
-push UINTEGER
+push UCHAR
+push uchar_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push USHORT
+push ushort_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
+push UINT
 push uinteger_k
 push dword [ebp - 52]
 call symbol_table_init
 add esp, 12
 push BOOL
 push bool_k
-push dword [ebp - 52]
-call symbol_table_init
-add esp, 12
-push CHAR
-push char_k
 push dword [ebp - 52]
 call symbol_table_init
 add esp, 12
@@ -239,21 +259,44 @@ call symbol_table_init
 add esp, 12
 
 ; init type table with primitives
+push 1
+push CHAR
+push char_k
+push dword [ebp - 56]
+call type_table_init
+add esp, 16
+
+push 2
+push SHORT
+push short_k
+push dword [ebp - 56]
+call type_table_init
+add esp, 16
+
 push 4
-push INTEGER
+push INT
 push integer_k
 push dword [ebp - 56]
 call type_table_init
 add esp, 16
-push 4
-push UINTEGER
-push uinteger_k
+
+push 1
+push UCHAR
+push uchar_k
 push dword [ebp - 56]
 call type_table_init
 add esp, 16
-push 1
-push CHAR
-push char_k
+
+push 2
+push USHORT
+push ushort_k
+push dword [ebp - 56]
+call type_table_init
+add esp, 16
+
+push 4
+push UINT
+push uinteger_k
 push dword [ebp - 56]
 call type_table_init
 add esp, 16
@@ -430,9 +473,12 @@ pointer_k: db "pointer", 0
 my_var: db "my_var", 0
 
 ; reserved words
-char_k: db "char", 0
-integer_k: db "int", 0
+uchar_k: db "uchar", 0
+ushort_k: db "ushort", 0
 uinteger_k: db "uint", 0 
+char_k: db "char", 0
+short_k: db "short", 0
+integer_k: db "int", 0
 if_k: db "if", 0
 else_k: db "else", 0
 do_k: db "do", 0
