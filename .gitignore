@@ -1,4 +1,7 @@
 *.czr
 extra/
 utils/
-Networking/
+output/
+source/
+debug_scripts/
+hand_written_parser/
