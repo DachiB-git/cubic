@@ -39,6 +39,7 @@ key_to_num = {
     "USHORT": 284,
     "UINT": 285,
     "BOOL": 286,
+    "ASM": 287,
     "prog": 300, 
     "TyDS": 301,
     "VaDS": 302,
