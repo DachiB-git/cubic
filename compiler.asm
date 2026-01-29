@@ -35,6 +35,7 @@
 %define USHORT 284
 %define UINT 285
 %define BOOL 286
+%define ASM 287
 
 %define prog 300 
 %define TyDS 301
@@ -172,6 +173,11 @@ add esp, 8
 mov dword [ebp - 64], eax                   ; store func_table
 
 ; init table with reserved keywords
+push ASM
+push asm_k
+push dword [ebp - 52]
+call symbol_table_init
+add esp, 12
 push CHAR
 push char_k
 push dword [ebp - 52]
@@ -473,6 +479,7 @@ pointer_k: db "pointer", 0
 my_var: db "my_var", 0
 
 ; reserved words
+asm_k: db "asm", 0
 uchar_k: db "uchar", 0
 ushort_k: db "ushort", 0
 uinteger_k: db "uint", 0 

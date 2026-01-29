@@ -527,13 +527,7 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push UINT
-push prog
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
+push SHORT
 push prog
 push dword [ebp+8]
 call jump_table_init
@@ -545,13 +539,19 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push TYNAME
+push INT
 push prog
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push USHORT
+push BOOL
+push prog
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
 push prog
 push dword [ebp+8]
 call jump_table_init
@@ -563,13 +563,13 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push INT
+push USHORT
 push prog
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push SHORT
+push TYNAME
 push prog
 push dword [ebp+8]
 call jump_table_init
@@ -602,13 +602,7 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push UINT
-push TyDS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push BOOL
+push SHORT
 push TyDS
 push dword [ebp+8]
 call jump_table_init
@@ -620,13 +614,7 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push TYNAME
-push TyDS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push USHORT
+push INT
 push TyDS
 push dword [ebp+8]
 call jump_table_init
@@ -638,19 +626,31 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
+push BOOL
+push TyDS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push UINT
+push TyDS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
 push UCHAR
 push TyDS
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push INT
+push USHORT
 push TyDS
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push SHORT
+push TYNAME
 push TyDS
 push dword [ebp+8]
 call jump_table_init
@@ -700,25 +700,19 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push UINT
-push TE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
-push TE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push CHAR
+push SHORT
 push TE
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push UCHAR
+push TE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
 push TE
 push dword [ebp+8]
 call jump_table_init
@@ -736,13 +730,19 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
+push CHAR
+push TE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
 push INT
 push TE
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push SHORT
+push BOOL
 push TE
 push dword [ebp+8]
 call jump_table_init
@@ -808,13 +808,13 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push TYNAME
+push FUNCNAME
 push TyDeco
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push FUNCNAME
+push TYNAME
 push TyDeco
 push dword [ebp+8]
 call jump_table_init
@@ -841,19 +841,19 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x21
-push PDeco
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push 0x5b
-push PDeco
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
 push NAME
+push PDeco
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push FUNCNAME
+push PDeco
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x21
 push PDeco
 push dword [ebp+8]
 call jump_table_init
@@ -865,7 +865,7 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push FUNCNAME
+push 0x5b
 push PDeco
 push dword [ebp+8]
 call jump_table_init
@@ -906,13 +906,13 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push TYNAME
+push FUNCNAME
 push ArrDeco
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push FUNCNAME
+push TYNAME
 push ArrDeco
 push dword [ebp+8]
 call jump_table_init
@@ -1027,13 +1027,7 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push UINT
-push VaDS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
+push SHORT
 push VaDS
 push dword [ebp+8]
 call jump_table_init
@@ -1045,13 +1039,19 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push TYNAME
+push INT
 push VaDS
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push USHORT
+push BOOL
+push VaDS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
 push VaDS
 push dword [ebp+8]
 call jump_table_init
@@ -1063,13 +1063,49 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push INT
+push USHORT
 push VaDS
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push SHORT
+push TYNAME
+push VaDS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push NAME
+push VaDS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x7d
+push VaDS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push ASM
+push VaDS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push FUNC
+push VaDS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push DO
+push VaDS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push FUNCNAME
 push VaDS
 push dword [ebp+8]
 call jump_table_init
@@ -1087,37 +1123,7 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push DO
-push VaDS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push FUNC
-push VaDS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push NAME
-push VaDS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
 push RETURN
-push VaDS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push 0x7d
-push VaDS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push FUNCNAME
 push VaDS
 push dword [ebp+8]
 call jump_table_init
@@ -1146,25 +1152,19 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push UINT
-push VaD
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
-push VaD
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push CHAR
+push SHORT
 push VaD
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push UCHAR
+push VaD
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
 push VaD
 push dword [ebp+8]
 call jump_table_init
@@ -1182,13 +1182,19 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
+push CHAR
+push VaD
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
 push INT
 push VaD
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push SHORT
+push BOOL
 push VaD
 push dword [ebp+8]
 call jump_table_init
@@ -1318,25 +1324,19 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push UINT
-push PaD
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
-push PaD
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push CHAR
+push SHORT
 push PaD
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push UCHAR
+push PaD
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
 push PaD
 push dword [ebp+8]
 call jump_table_init
@@ -1354,13 +1354,19 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
+push CHAR
+push PaD
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
 push INT
 push PaD
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push SHORT
+push BOOL
 push PaD
 push dword [ebp+8]
 call jump_table_init
@@ -1449,13 +1455,7 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push UINT
-push PaDS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
+push SHORT
 push PaDS
 push dword [ebp+8]
 call jump_table_init
@@ -1467,13 +1467,19 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push TYNAME
+push INT
 push PaDS
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push USHORT
+push BOOL
+push PaDS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
 push PaDS
 push dword [ebp+8]
 call jump_table_init
@@ -1485,13 +1491,13 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push INT
+push USHORT
 push PaDS
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push SHORT
+push TYNAME
 push PaDS
 push dword [ebp+8]
 call jump_table_init
@@ -1549,13 +1555,19 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push IF
+push NAME
 push body
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push NAME
+push FUNCNAME
+push body
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push IF
 push body
 push dword [ebp+8]
 call jump_table_init
@@ -1567,13 +1579,13 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push DO
+push ASM
 push body
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push FUNCNAME
+push DO
 push body
 push dword [ebp+8]
 call jump_table_init
@@ -1625,13 +1637,19 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push IF
+push NAME
 push StS
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push NAME
+push FUNCNAME
+push StS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push IF
 push StS
 push dword [ebp+8]
 call jump_table_init
@@ -1643,13 +1661,13 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push DO
+push ASM
 push StS
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push FUNCNAME
+push DO
 push StS
 push dword [ebp+8]
 call jump_table_init
@@ -1839,6 +1857,33 @@ push St
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
+push 0
+push ASM
+call get_linked_list
+add esp, 8
+mov dword [ebp-4], eax
+push 0x28
+push dword [ebp-4]
+call linked_list_append
+add esp, 8
+push STRLIT
+push dword [ebp-4]
+call linked_list_append
+add esp, 8
+push 0x29
+push dword [ebp-4]
+call linked_list_append
+add esp, 8
+push 0x3b
+push dword [ebp-4]
+call linked_list_append
+add esp, 8
+push dword [ebp-4]
+push ASM
+push St
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
 leave
 ret
 init_MatchedElse:
@@ -1869,13 +1914,37 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push IF
+push NAME
 push MatchedElse
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push NAME
+push 0x7d
+push MatchedElse
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push ASM
+push MatchedElse
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push DO
+push MatchedElse
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push FUNCNAME
+push MatchedElse
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push IF
 push MatchedElse
 push dword [ebp+8]
 call jump_table_init
@@ -1888,24 +1957,6 @@ call jump_table_init
 add esp, 16
 push EPSILON
 push RETURN
-push MatchedElse
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push DO
-push MatchedElse
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push 0x7d
-push MatchedElse
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push FUNCNAME
 push MatchedElse
 push dword [ebp+8]
 call jump_table_init
@@ -1945,60 +1996,6 @@ call get_linked_list
 add esp, 8
 mov dword [ebp-4], eax
 push dword [ebp-4]
-push UINT
-push GenE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
-push GenE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push NUM
-push GenE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TRUE
-push GenE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x26
-push GenE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TYNAME
-push GenE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push USHORT
-push GenE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x21
-push GenE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x28
-push GenE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
 push NAME
 push GenE
 push dword [ebp+8]
@@ -2006,18 +2003,6 @@ call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push INT
-push GenE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push SHORT
-push GenE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push CHAR
 push GenE
 push dword [ebp+8]
 call jump_table_init
@@ -2035,13 +2020,79 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push UCHAR
+push BOOL
+push GenE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push NUM
+push GenE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x26
 push GenE
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push FALSE
+push GenE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push SHORT
+push GenE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TRUE
+push GenE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push CHAR
+push GenE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
+push GenE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UCHAR
+push GenE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x28
+push GenE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push USHORT
+push GenE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x21
+push GenE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TYNAME
 push GenE
 push dword [ebp+8]
 call jump_table_init
@@ -2069,85 +2120,13 @@ call get_linked_list
 add esp, 8
 mov dword [ebp-4], eax
 push dword [ebp-4]
-push UINT
-push Arg
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
-push Arg
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push NUM
-push Arg
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push UCHAR
-push Arg
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TRUE
-push Arg
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x26
-push Arg
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TYNAME
-push Arg
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push USHORT
-push Arg
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x21
-push Arg
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
 push NAME
 push Arg
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push FUNCNAME
-push Arg
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
 push INT
-push Arg
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push SHORT
-push Arg
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push CHAR
 push Arg
 push dword [ebp+8]
 call jump_table_init
@@ -2165,7 +2144,67 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
+push BOOL
+push Arg
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push NUM
+push Arg
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
 push STRLIT
+push Arg
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x26
+push Arg
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push FALSE
+push Arg
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push SHORT
+push Arg
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TRUE
+push Arg
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push CHAR
+push Arg
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push FUNCNAME
+push Arg
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
+push Arg
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UCHAR
 push Arg
 push dword [ebp+8]
 call jump_table_init
@@ -2177,7 +2216,19 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push FALSE
+push USHORT
+push Arg
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x21
+push Arg
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TYNAME
 push Arg
 push dword [ebp+8]
 call jump_table_init
@@ -2198,85 +2249,13 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push UINT
-push ArgS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
-push ArgS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push NUM
-push ArgS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push UCHAR
-push ArgS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TRUE
-push ArgS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x26
-push ArgS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TYNAME
-push ArgS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push USHORT
-push ArgS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x21
-push ArgS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
 push NAME
 push ArgS
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push FUNCNAME
-push ArgS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
 push INT
-push ArgS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push SHORT
-push ArgS
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push CHAR
 push ArgS
 push dword [ebp+8]
 call jump_table_init
@@ -2294,7 +2273,67 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
+push BOOL
+push ArgS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push NUM
+push ArgS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
 push STRLIT
+push ArgS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x26
+push ArgS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push FALSE
+push ArgS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push SHORT
+push ArgS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TRUE
+push ArgS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push CHAR
+push ArgS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push FUNCNAME
+push ArgS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
+push ArgS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UCHAR
 push ArgS
 push dword [ebp+8]
 call jump_table_init
@@ -2306,7 +2345,19 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push FALSE
+push USHORT
+push ArgS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x21
+push ArgS
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TYNAME
 push ArgS
 push dword [ebp+8]
 call jump_table_init
@@ -2397,31 +2448,13 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
+push 0x2c
+push Rid
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
 push GE
-push Rid
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push OR_OP
-push Rid
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push LE
-push Rid
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push LT
-push Rid
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push 0x5d
 push Rid
 push dword [ebp+8]
 call jump_table_init
@@ -2433,43 +2466,7 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x2c
-push Rid
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push 0x2b
-push Rid
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push EQ
-push Rid
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
 push AND_OP
-push Rid
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push 0x29
-push Rid
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push GT
-push Rid
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push 0x3d
 push Rid
 push dword [ebp+8]
 call jump_table_init
@@ -2481,19 +2478,73 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push NE
-push Rid
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
 push 0x2d
 push Rid
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
+push 0x2b
+push Rid
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push NE
+push Rid
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x3d
+push Rid
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push GT
+push Rid
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push LT
+push Rid
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x29
+push Rid
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x5d
+push Rid
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
 push 0x3b
+push Rid
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push LE
+push Rid
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push OR_OP
+push Rid
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push EQ
 push Rid
 push dword [ebp+8]
 call jump_table_init
@@ -2554,60 +2605,6 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push UINT
-push E
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
-push E
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push NUM
-push E
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TRUE
-push E
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x26
-push E
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TYNAME
-push E
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push USHORT
-push E
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x21
-push E
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x28
-push E
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
 push NAME
 push E
 push dword [ebp+8]
@@ -2615,18 +2612,6 @@ call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push INT
-push E
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push SHORT
-push E
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push CHAR
 push E
 push dword [ebp+8]
 call jump_table_init
@@ -2644,13 +2629,79 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push UCHAR
+push BOOL
+push E
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push NUM
+push E
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x26
 push E
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push FALSE
+push E
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push SHORT
+push E
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TRUE
+push E
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push CHAR
+push E
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
+push E
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UCHAR
+push E
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x28
+push E
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push USHORT
+push E
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x21
+push E
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TYNAME
 push E
 push dword [ebp+8]
 call jump_table_init
@@ -2700,43 +2751,13 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push GE
-push RE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push OR_OP
-push RE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push LE
-push RE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push LT
-push RE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push 0x5d
-push RE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
 push 0x2c
 push RE
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push EQ
+push GE
 push RE
 push dword [ebp+8]
 call jump_table_init
@@ -2748,7 +2769,7 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x29
+push NE
 push RE
 push dword [ebp+8]
 call jump_table_init
@@ -2760,13 +2781,43 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push NE
+push LT
+push RE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x29
+push RE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x5d
 push RE
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
 push 0x3b
+push RE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push LE
+push RE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push OR_OP
+push RE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push EQ
 push RE
 push dword [ebp+8]
 call jump_table_init
@@ -2787,25 +2838,13 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push UINT
+push NAME
 push T
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push BOOL
-push T
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push CHAR
-push T
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push NUM
+push SHORT
 push T
 push dword [ebp+8]
 call jump_table_init
@@ -2817,61 +2856,7 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push 0x26
-push T
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TYNAME
-push T
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push USHORT
-push T
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x21
-push T
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x2a
-push T
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x2d
-push T
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push UCHAR
-push T
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push NAME
-push T
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x28
-push T
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push FALSE
+push CHAR
 push T
 push dword [ebp+8]
 call jump_table_init
@@ -2883,7 +2868,73 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push SHORT
+push 0x2a
+push T
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push USHORT
+push T
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x2d
+push T
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push BOOL
+push T
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
+push T
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UCHAR
+push T
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x28
+push T
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push NUM
+push T
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x26
+push T
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x21
+push T
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push FALSE
+push T
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TYNAME
 push T
 push dword [ebp+8]
 call jump_table_init
@@ -2933,49 +2984,13 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push GE
-push RT
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push OR_OP
-push RT
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push LE
-push RT
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push LT
-push RT
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push 0x5d
-push RT
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
 push 0x2c
 push RT
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x2b
-push RT
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push EQ
+push GE
 push RT
 push dword [ebp+8]
 call jump_table_init
@@ -2987,13 +3002,13 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x29
+push 0x2d
 push RT
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push GT
+push 0x2b
 push RT
 push dword [ebp+8]
 call jump_table_init
@@ -3005,13 +3020,49 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x2d
+push GT
+push RT
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push LT
+push RT
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x29
+push RT
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push 0x5d
 push RT
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
 push 0x3b
+push RT
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push LE
+push RT
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push OR_OP
+push RT
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push EQ
 push RT
 push dword [ebp+8]
 call jump_table_init
@@ -3111,25 +3162,19 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push UINT
-push F
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
-push F
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push CHAR
+push SHORT
 push F
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push UCHAR
+push F
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
 push F
 push dword [ebp+8]
 call jump_table_init
@@ -3147,13 +3192,19 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
+push CHAR
+push F
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
 push INT
 push F
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push SHORT
+push BOOL
 push F
 push dword [ebp+8]
 call jump_table_init
@@ -3226,60 +3277,6 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push UINT
-push RelE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
-push RelE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push NUM
-push RelE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TRUE
-push RelE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x26
-push RelE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TYNAME
-push RelE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push USHORT
-push RelE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x21
-push RelE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x28
-push RelE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
 push NAME
 push RelE
 push dword [ebp+8]
@@ -3287,18 +3284,6 @@ call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push INT
-push RelE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push SHORT
-push RelE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push CHAR
 push RelE
 push dword [ebp+8]
 call jump_table_init
@@ -3316,13 +3301,79 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push UCHAR
+push BOOL
+push RelE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push NUM
+push RelE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x26
 push RelE
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push FALSE
+push RelE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push SHORT
+push RelE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TRUE
+push RelE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push CHAR
+push RelE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
+push RelE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UCHAR
+push RelE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x28
+push RelE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push USHORT
+push RelE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x21
+push RelE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TYNAME
 push RelE
 push dword [ebp+8]
 call jump_table_init
@@ -3347,7 +3398,7 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push GE
+push GT
 push RRelE
 push dword [ebp+8]
 call jump_table_init
@@ -3359,19 +3410,19 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push GT
+push LT
+push RRelE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push GE
 push RRelE
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push NE
-push RRelE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push LT
 push RRelE
 push dword [ebp+8]
 call jump_table_init
@@ -3389,7 +3440,7 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push OR_OP
+push 0x2c
 push RRelE
 push dword [ebp+8]
 call jump_table_init
@@ -3401,7 +3452,7 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x2c
+push AND_OP
 push RRelE
 push dword [ebp+8]
 call jump_table_init
@@ -3413,7 +3464,7 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push AND_OP
+push OR_OP
 push RRelE
 push dword [ebp+8]
 call jump_table_init
@@ -3506,60 +3557,6 @@ push dword [ebp-4]
 call linked_list_append
 add esp, 8
 push dword [ebp-4]
-push UINT
-push JointE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push BOOL
-push JointE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push NUM
-push JointE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TRUE
-push JointE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x26
-push JointE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push TYNAME
-push JointE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push USHORT
-push JointE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x21
-push JointE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push 0x28
-push JointE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
 push NAME
 push JointE
 push dword [ebp+8]
@@ -3567,18 +3564,6 @@ call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push INT
-push JointE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push SHORT
-push JointE
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push dword [ebp-4]
-push CHAR
 push JointE
 push dword [ebp+8]
 call jump_table_init
@@ -3596,13 +3581,79 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
-push UCHAR
+push BOOL
+push JointE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push NUM
+push JointE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x26
 push JointE
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push dword [ebp-4]
 push FALSE
+push JointE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push SHORT
+push JointE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TRUE
+push JointE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push CHAR
+push JointE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UINT
+push JointE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push UCHAR
+push JointE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x28
+push JointE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push USHORT
+push JointE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push 0x21
+push JointE
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push dword [ebp-4]
+push TYNAME
 push JointE
 push dword [ebp+8]
 call jump_table_init
@@ -3641,13 +3692,13 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x5d
+push 0x2c
 push Union
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x2c
+push 0x5d
 push Union
 push dword [ebp+8]
 call jump_table_init
@@ -3694,13 +3745,13 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x5d
+push 0x2c
 push UnionT
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push 0x2c
+push 0x5d
 push UnionT
 push dword [ebp+8]
 call jump_table_init
@@ -3737,19 +3788,7 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
-push OR_OP
-push Intersect
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
 push 0x29
-push Intersect
-push dword [ebp+8]
-call jump_table_init
-add esp, 16
-push EPSILON
-push 0x5d
 push Intersect
 push dword [ebp+8]
 call jump_table_init
@@ -3761,14 +3800,25 @@ push dword [ebp+8]
 call jump_table_init
 add esp, 16
 push EPSILON
+push 0x5d
+push Intersect
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
 push 0x3b
+push Intersect
+push dword [ebp+8]
+call jump_table_init
+add esp, 16
+push EPSILON
+push OR_OP
 push Intersect
 push dword [ebp+8]
 call jump_table_init
 add esp, 16
 leave
 ret
-
 
 ; prints the supplied error message and cached line on which the error is expected from lexer_state
 print_error:
