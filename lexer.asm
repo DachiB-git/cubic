@@ -1,9 +1,5 @@
 [bits 32]
 
-%define numeric_value 0x1000_0058
-%define op_tag 0x1000_0060
-%define peek 0x1000_0004
-
 ; struct lexer_state 
 ;{
     ; char* buffer_addr; 
@@ -194,17 +190,18 @@ push dword [ebp - 28]
 call string_builder_to_string
 add esp, 8
 mov dword [ebp - 48], eax
+mov byte [ebp - 4], 0x22
 lea eax, dword [ebp - 16]
 push eax 
 push dword [ebp - 28]    
-push 0x22   ; "
+push dword [ebp - 4]
 call string_builder_append              ; add to current buffer
 add esp, 12
 push dword [ebp - 16] 
 push dword [ebp - 28]  
 call string_builder_to_string
 add esp, 8
-mov dword [ebp - 56], eax   ; save str_lit key
+mov dword [ebp - 56], eax
 push dword [ebp - 56]
 push dword [ebp - 32]
 call hash_map_get
@@ -232,7 +229,7 @@ push STRLIT
 call get_token
 add esp, 8
 mov dword [ebp - 52], eax
-push word [ebp - 52]
+push dword [ebp - 52]
 push dword [ebp - 56]
 push dword [ebp - 32]
 call hash_map_put
@@ -246,6 +243,39 @@ mov eax, dword [ebp - 52]
 leave
 ret
 .no_str_literal:
+.char_literal:
+cmp dword [ebp - 4], 0x27 ; '
+jne .no_char_literal
+mov dword [ebp - 8], 0
+push dword [ebp - 24]
+push dword [ebp - 20]
+call get_char
+add esp, 8
+mov byte [ebp - 4], al
+cmp dword [ebp - 4], 0x27 ; '
+je .incorrect_literal
+mov byte [ebp - 8], al ; load char literal value
+push dword [ebp - 24]
+push dword [ebp - 20]
+call get_char
+add esp, 8
+mov byte [ebp - 4], al
+cmp dword [ebp - 4], 0x27 ; '
+jne .incorrect_literal
+push dword [ebp - 8]
+push NUM
+call get_token
+add esp, 8
+leave
+ret
+.incorrect_literal:
+push dword [ebp - 8]
+push UNTERMINATEDLIT
+call get_token
+add esp, 8
+leave
+ret
+.no_char_literal:
 ; else if (peek is a digit)
 push dword [ebp - 4]
 call is_a_digit
