@@ -400,5 +400,36 @@ invariant: every time we see a chain, and the chain is currently on OR, compleme
 
 */
 
+if (op) { StS }
+mov eax, dword [ebp - 4]
+cmp eax, 0
+je .label_out
+.label_true:
+gen(StS)
+.label_out:
 
-x * 3
+if (op) { StS }
+else { StS }
+mov eax, dword [ebp - 4]
+cmp eax, 0
+je .label_out
+.label_true:
+gen(StS)
+jmp .label_new_out
+.label_out:
+gen(StS)
+.label_new_out
+
+if (op) { StS }
+elif (op) { StS }
+else { StS }
+mov eax, dword [ebp - 4]
+cmp eax, 0
+je .label_out
+.label_true:
+gen(StS)
+jmp .label_new_out
+.label_out:
+mov eax, dword [ebp - 4]
+cmp eax, 0
+je .label_new_true

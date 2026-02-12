@@ -1,0 +1,77 @@
+PARAMETER TYPE CHECKING
+param       |       variable
+int*        +       int[NUM]
+int[2]*     +       int[NUM][2]
+
+initial array can decay, any refrence after the first one takes into consideration
+the declared size
+
+int*[2]      -        int[NUM][2]
+
+pointer_flag = set to true if checking pointers
+
+bool res;
+
+
+
+func bool check_if_valid_binary(int op_type, quad* left_quad, quad* right_quad, table* type_table)
+{
+    bool res;
+    bool pointer_flag;
+    type* left_type;
+    type* right_type;
+    left_type = left_quad.type;
+    right_type = right_quad.type;
+    pointer_flag = left_type.complexity == POINTER && right_type.complexity == POINTER;
+    pointer_array_flag = left_type.complexity == POINTER && right_type.type.complexity == ARRAY || 
+                        left_type.complexity == ARRAY && right_type.complexity == POINTER;
+    if (!pointer_flag && !pointer_array_flag)
+    {
+        if (left_type.complexity == right_type.complexity)
+        {
+            if (left_type.complexity == STRUCTURE)
+            {
+                res = string_equals(left_type.key, right_type.key);
+            }
+            res = true;
+        }
+        else
+        {
+            res = false;
+        }
+    }
+    else 
+    {
+        // pointer check routine
+        if (pointer_flag)
+        {
+            while(pointer_flag)
+            {
+                left_type = left_type.type;
+                right_type = right_type.type;
+                if (left_type.complexity == PRIMITIVE || left_type.complexity == STRUCTURE)
+                {
+                    pointer_flag = false;
+                }
+                if (right_type.complexity == PRIMITIVE || right_type.complexity == STRUCTURE)
+                {
+                    pointer_flag = false;
+                }
+            }
+            if (left_type.complexity == STRUCTURE || right_type.complexity == STRUCTURE)
+            {
+                res = string_equals(left_type.key, right_type.key);
+            }
+            else
+            {
+                res = left_type.type == right_type.type;
+            }
+        }
+        else
+        {
+        // array|pointer routine
+        }
+    }
+    return res;
+}
+

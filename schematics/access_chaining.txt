@@ -18,3 +18,23 @@ int arr[2][2];
 1 * 4
 
 *(arr_base + (i + j))
+
+
+arr[x][y + x]
+
+t1 = y + x
+t2 = x + t1
+t3 = t2 * 4
+t4 = arr[t3]
+
+
+LL[2] lists;
+
+lists[0].val
+
+parse from left to right
+append access op from right to left
+append member ops from left to right
+
+t1 = lists[0]
+t2 = t1.val
