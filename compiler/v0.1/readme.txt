@@ -15,3 +15,5 @@ Desolving branch statements when supplied with constants or evaluated constant v
 Register spilling not implemented.
 Non top level return statements don't generate a jump to the end of function body.
 Functions can have no statements.
+Semantic error reporting for invalid operations only reports the function name, i.e. the block origin of the error.
+Syntax errors report the line of the error and the last invalid token entry.
