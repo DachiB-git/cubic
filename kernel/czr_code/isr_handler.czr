@@ -1,0 +1,29 @@
+typedef struct isr_state
+{
+    uint ds;
+    uint edi;
+    uint esi;
+    uint ebp;
+    uint k_esp;
+    uint ebx;
+    uint edx;
+    uint ecx;
+    uint eax;
+    uint interrupt;
+    uint error;
+    uint eip;
+    uint cs;
+    uint eflags;
+    uint p_esp;
+    uint ss;
+};
+func int print_number(int n)
+{
+    return 0;
+}
+
+func int isr_handler(isr_state* state)
+{
+    print_number(state[0].interrupt);
+    return 0;
+}

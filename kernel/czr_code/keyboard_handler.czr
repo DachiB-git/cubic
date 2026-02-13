@@ -1,0 +1,60 @@
+typedef struct isr_state
+{
+    uint ds;
+    uint edi;
+    uint esi;
+    uint ebp;
+    uint k_esp;
+    uint ebx;
+    uint edx;
+    uint ecx;
+    uint eax;
+    uint interrupt;
+    uint error;
+    uint eip;
+    uint cs;
+    uint eflags;
+    uint p_esp;
+    uint ss;
+};
+
+typedef struct key_packet
+{
+    char scan_code;
+    bool shift_pressed;
+};
+
+int KEYBOARD_CONTROLLER_PORT;
+key_packet packet;
+
+func char inb(int port)
+{
+    return 0;
+}
+
+func int handler_KEYBOARD(isr_state* state)
+{
+    char scan_code;
+    scan_code = inb(KEYBOARD_CONTROLLER_PORT);
+    // left_shift press scan_code == 0x2A   | 42
+    // left_shift release scan_code == 0xAA | 170
+    if (scan_code == 42)
+    {
+        packet.scan_code = 0;
+        packet.shift_pressed = true;
+    }
+    else 
+    {
+        packet.scan_code = scan_code;
+    }
+    if (scan_code == 170)
+    {
+        packet.scan_code = 0;
+        packet.shift_pressed = false;
+    }
+    else
+    {
+        packet.scan_code = scan_code;
+    }
+    return 0;
+}

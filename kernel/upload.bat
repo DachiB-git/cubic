@@ -1,0 +1,1 @@
+dd if=floppy.img of=//./f:

@@ -1,0 +1,27 @@
+// kernel: char* itoa_buffer
+
+func int print_number(int n)
+{
+    itoa(n, &itoa_buffer, 10);
+    print_string(&itoa_buffer);
+    return 0;
+}
+
+func int print_to_start(char* s)
+{
+    // 0xB8000 - 753664
+    uchar* text_mode_frame_buffer;
+    char* c;
+    // load the text
+    text = "Hello world!";
+    c = s;
+    // load buffer address
+    text_mode_frame_buffer = uchar*! 753664;
+    while (*c != 0)
+    {
+        text_mode_frame_buffer[0] = *c;
+        c = c + 1;
+        text_mode_frame_buffer = text_mode_frame_buffer + 2;
+    }
+    return 0;
+}

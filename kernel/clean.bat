@@ -1,0 +1,1 @@
+python ".\kernel_scripts\clean_output.py" %1

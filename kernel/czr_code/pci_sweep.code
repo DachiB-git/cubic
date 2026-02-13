@@ -1,0 +1,22 @@
+void pci_sweep() {
+    int[256 * 32 * 8] valid_devices;
+    int res;
+    for (int bus = 0; bus < 256; bus++) {
+        for (int device = 0; device < 32; device++) {
+            for (int func = 0; func < 8; func++) {
+                res = pci_config_read(bus, device, func);
+                if (res == 0xFFFF_FFFF) {
+                    break;
+                }
+                valid_devices[bus * device + func] = res;
+            }
+        }
+    }
+}
+
+
+int pci_config_read(int bus, int device, int func) {
+    int address = 0x8000_0000 | bus << 16 | device << 11 | func << 8;
+    out(0xcf8, address);
+    return in(0xcfc);
+}

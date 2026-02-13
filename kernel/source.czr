@@ -1,0 +1,10 @@
+func int print_string(char* s)
+{
+    return 0;
+}
+
+func int main()
+{
+    print_string("Hello world!\n");
+    return 0;
+}
