@@ -1,7 +1,4 @@
-*.czr
-extra/
-utils/
-output/
-source/
 debug_scripts/
-hand_written_parser/
+extra/
+misc/
+utils/
