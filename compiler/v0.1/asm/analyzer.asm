@@ -4899,6 +4899,10 @@ add esp, 4
 mov edx, dword [ebp + 8]
 mov dword [edx], eax
 .exit:
+mov dword [block_branch_label_increment], 3
+mov dword [left_cond_goto], 0
+mov dword [right_cond_goto], 0
+mov dword [node_with_right_cond_goto], 0
 leave
 ret
 
