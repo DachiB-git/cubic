@@ -4691,6 +4691,9 @@ mov eax, dword [ebp - 8]
 cmp dword [eax + 4], STRUCTURE
 je .error_exit
 mov eax, dword [ebp - 4]
+cmp dword [eax + 8], BOOL
+jne .error_exit
+mov eax, dword [ebp - 4]
 jmp .exit
 .error_exit:
 ; mov eax, dword [ebp - 4]
