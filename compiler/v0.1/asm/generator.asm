@@ -1365,9 +1365,10 @@ mov edx, dword [edx + 4]
 mov dword [eax + 12], edx
 .skip_l_1:
 ; main access operation
-mov eax, dword [ebp + 8]
-mov eax, dword [eax + 12]
-push dword [eax + 12]
+; mov eax, dword [ebp + 8]
+; mov eax, dword [eax + 12]
+; push dword [eax + 12]
+push dword [ebp + 8]
 push dword [ebp - 4]
 push dword [ebp + 20]
 push dword [ebp + 16]
@@ -1376,18 +1377,18 @@ mov eax, dword [ebp + 8]
 push dword [eax + 8]
 call generate_array_subscript
 add esp, 24
+; ; scale the dual_quad
+; mov eax, dword [ebp + 16]
+; push dword [eax]
+; push dword [ebp + 8]
+; push dword [ebp - 4]
+; call scale_dual_quad_data
+; add esp, 12
 ; determine concrete access operation
 cmp dword [ebp - 8], ACCESS_OP
 je .exit
 cmp dword [ebp - 8], FIRST_ACCESS_OP
 je .exit
-; scale the dual_quad
-mov eax, dword [ebp + 16]
-push dword [eax]
-push dword [ebp + 8]
-push dword [ebp - 4]
-call scale_dual_quad_data
-add esp, 12
 cmp dword [ebp - 8], LVAL_ACCESS_OP
 je .create_addr_quad
 mov eax, dword [ebp + 16]
@@ -1764,9 +1765,10 @@ mov dword [eax + 4], 0
 jmp .exit
 
 .routine_1:
-mov eax, dword [ebp + 8]
-mov eax, dword [eax + 12]
-push dword [eax + 12]
+; mov eax, dword [ebp + 8]
+; mov eax, dword [eax + 12]
+; push dword [eax + 12]
+push dword [ebp + 8]
 push dword [ebp + 24]
 push dword [ebp + 20]
 push dword [ebp + 16]
@@ -1775,12 +1777,12 @@ mov eax, dword [ebp + 8]
 push dword [eax + 8]
 call generate_array_subscript
 add esp, 24
-mov eax, dword [ebp + 16]
-push dword [eax]
-push dword [ebp + 8]
-push dword [ebp + 24]
-call scale_dual_quad_data
-add esp, 12
+; mov eax, dword [ebp + 16]
+; push dword [eax]
+; push dword [ebp + 8]
+; push dword [ebp + 24]
+; call scale_dual_quad_data
+; add esp, 12
 mov eax, dword [ebp + 24]
 cmp dword [eax + 8], 0
 je .add_constant
@@ -1810,9 +1812,10 @@ mov dword [eax + 4], 0
 jmp .exit
 
 .routine_3:
-mov eax, dword [ebp + 8]
-mov eax, dword [eax + 12]
-push dword [eax + 12]
+; mov eax, dword [ebp + 8]
+; mov eax, dword [eax + 12]
+; push dword [eax + 12]
+push dword [ebp + 8]
 push dword [ebp + 24]
 push dword [ebp + 20]
 push dword [ebp + 16]
@@ -1821,12 +1824,12 @@ mov eax, dword [ebp + 8]
 push dword [eax + 8]
 call generate_array_subscript
 add esp, 24
-mov eax, dword [ebp + 16]
-push dword [eax]
-push dword [ebp + 8]
-push dword [ebp + 24]
-call scale_dual_quad_data
-add esp, 12
+; mov eax, dword [ebp + 16]
+; push dword [eax]
+; push dword [ebp + 8]
+; push dword [ebp + 24]
+; call scale_dual_quad_data
+; add esp, 12
 mov eax, dword [ebp + 24]
 cmp dword [eax + 8], 0
 je .add_constant
@@ -1890,11 +1893,14 @@ add esp, 4
 leave
 ret
 
-
-; void generate_array_subscript(quad* sub_quad, buffer* buffer, int* free_register, table* func_var_table, quad* dual_quad, int item_size)
+; TODO: fix scaling order on intermediate and ending accesses
+; void generate_array_subscript(quad* sub_quad, buffer* buffer, int* free_register, table* func_var_table, quad* dual_quad, quad* op_quad)
 generate_array_subscript:
 push ebp
 mov ebp, esp
+sub esp, 8
+mov dword [ebp - 4], 0  ; old_subscript flag
+mov dword [ebp - 8], 0  ; scale flag
 push dword [ebp + 8]
 push dword [ebp + 8]
 call get_complex_operand
@@ -1911,7 +1917,10 @@ jmp .operand_subscript
 mov eax, dword [ebp + 8]
 mov eax, dword [eax + 4]
 mov edx, dword [ebp + 24]
-imul eax, dword [ebp + 28]
+mov ecx, dword [ebp + 28]
+mov ecx, dword [ecx + 12]
+mov ecx, dword [ecx + 12]
+imul eax, ecx
 add dword [edx + 4], eax    ; increment offset by current constant
 jmp .exit
 .operand_subscript:
@@ -1925,8 +1934,30 @@ add esp, 20
 .old_subscript_check:
 mov eax, dword [ebp + 24]
 cmp dword [eax + 8], 1
-jne .no_old_subscript
+je .add_old_subscript
+mov dword [ebp - 8], 1
+jmp .no_old_subscript
 .add_old_subscript:
+mov eax, dword [ebp + 28]
+cmp dword [eax], SINGLE_ACCESS_OP
+je .no_pre_scale
+cmp dword [eax], LAST_ACCESS_OP
+je .no_pre_scale
+cmp dword [eax], LVAL_ACCESS_OP
+je .no_pre_scale
+jmp .pre_scale
+.no_pre_scale:
+mov dword [ebp - 8], 1
+jmp .post_scale
+.pre_scale:
+mov eax, dword [ebp + 16]
+push dword [eax]
+push dword [ebp + 28]
+push dword [ebp + 24]
+call scale_dual_quad_data
+add esp, 12
+mov dword [ebp - 8], 0
+.post_scale:
 push add_k
 call print_string_raw
 add esp, 4
@@ -1956,6 +1987,14 @@ dec dword [eax]
 .no_old_subscript:
 mov eax, dword [ebp + 24]
 mov dword [eax + 8], 1      ; set subscript_in_reg flag to true
+cmp dword [ebp - 8], 0
+je .exit
+mov eax, dword [ebp + 16]
+push dword [eax]
+push dword [ebp + 28]
+push dword [ebp + 24]
+call scale_dual_quad_data
+add esp, 12
 .exit:
 leave
 ret
@@ -1964,6 +2003,7 @@ ret
 scale_dual_quad_data:
 push ebp
 mov ebp, esp
+sub esp, 4
 ; register subscript scale
 mov eax, dword [ebp + 8]
 cmp dword [eax + 8], 0
@@ -1990,6 +2030,37 @@ push space
 call print_string_raw
 add esp, 4
 mov eax, dword [ebp + 12]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 12]
+cmp dword [eax + 4], POINTER
+je .scale_by_item_size
+mov eax, dword [ebp + 12]
+cmp dword [eax], FIRST_ACCESS_OP
+je .scale_by_arr_size
+cmp dword [eax], ACCESS_OP
+je .scale_by_arr_size
+jmp .scale_by_item_size
+.scale_by_arr_size:
+mov eax, dword [ebp + 12]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 12]   ; item size
+mov dword [ebp - 4], eax
+mov eax, dword [ebp + 12]
+mov eax, dword [eax + 4]
+mov eax, dword [eax + 12]
+mov eax, dword [eax + 12]   ; array size
+xor edx, edx
+div dword [ebp - 4]
+; array size in eax
+push eax
+call print_number_raw
+add esp, 4
+push nl
+call print_string_raw
+add esp, 4
+jmp .no_reg_scale
+.scale_by_item_size:
+mov eax, dword [ebp + 12]
 mov eax, dword [eax + 12]
 mov eax, dword [eax + 12]
 push eax
@@ -1999,13 +2070,6 @@ push nl
 call print_string_raw
 add esp, 4
 .no_reg_scale:
-leave
-ret
-
-scale_pointer_dual_quad_data:
-push ebp
-mov ebp, esp
-
 leave
 ret
 
