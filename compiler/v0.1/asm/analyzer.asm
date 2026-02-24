@@ -2394,7 +2394,7 @@ add esp, 8
 mov dword [ebp - 36], eax
 cmp dword [eax + 4], ARRAY
 je .type_cast_non_scalar_error
-cmp dword [eax + 4], STRUCT
+cmp dword [eax + 4], STRUCTURE
 je .type_cast_non_scalar_error
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
@@ -2437,6 +2437,10 @@ mov eax, dword [eax + 12]
 mov edx, dword [eax + 8]
 mov eax, dword [eax + 12 + edx * 4 + 8]
 mov dword [ebp - 8], eax
+mov eax, dword [eax + 12]
+cmp dword [eax + 4], STRUCTURE
+je .type_cast_struct_error
+mov eax, dword [ebp - 8]
 mov edx, dword [ebp - 36]
 mov dword [eax + 12], edx
 ; push dword [ebp - 36]
@@ -2457,6 +2461,18 @@ mov edx, dword [ebp - 8]
 mov dword [eax], edx
 mov eax, 1
 jmp .exit
+
+.type_cast_struct_error:
+push type_cast_struct_cast
+call print_string
+add esp, 4
+push dword [ebp + 36]
+call print_string
+add esp, 4
+push single_quote_close
+call print_line
+add esp, 4
+jmp .error_exit
 
 .type_cast_non_scalar_error:
 push type_cast_non_scalar
@@ -5169,6 +5185,7 @@ func_call_wrong_type_param: db "' for function call '", 0
 func_call_argument_amount_more: db "ERROR: semantic error, excess amount of arguments passed to called function '", 0
 func_call_argument_amount_less: db "ERROR: semantic error, less than expected amount of arguments passed to called function '", 0
 type_cast_non_scalar: db "ERROR: semantic error, cast to non-scalar value requested in function '", 0
+type_cast_struct_cast: db "ERROR: semantic error, requested cast on non-scalar value in function '", 0
 single_quote_close: db "'.", 10, 0
 param_red: db "ERROR: semantic error, parameter '", 0
 func_red: db "ERROR: semantic error, function '", 0
