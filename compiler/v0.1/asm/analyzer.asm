@@ -2392,10 +2392,6 @@ push dword [ebp + 20]
 call hash_map_get
 add esp, 8
 mov dword [ebp - 36], eax
-cmp dword [eax + 4], ARRAY
-je .type_cast_non_scalar_error
-cmp dword [eax + 4], STRUCTURE
-je .type_cast_non_scalar_error
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 4]
@@ -2415,6 +2411,11 @@ mov eax, dword [eax + 4]
 mov dword [ebp - 12], eax
 jmp .type_cast_pointer_loop
 .no_pointers:
+mov eax, dword [ebp - 36]
+cmp dword [eax + 4], ARRAY
+je .type_cast_non_scalar_error
+cmp dword [eax + 4], STRUCTURE
+je .type_cast_non_scalar_error
 mov eax, dword [ebp + 8]
 lea eax, dword [eax + 12]
 mov eax, dword [eax + 12]
